@@ -1,51 +1,120 @@
-const { DataTypes } = require("sequelize");
+/*
+ * Business schema and data accessor methods
+ */
 
-const sequelize = require("../lib/sequelize");
-const { Photo } = require("./course");
-const { Review } = require("./user");
+const { ObjectId } = require("mongodb");
 
-const Business = sequelize.define("business", {
-  ownerId: { type: DataTypes.INTEGER, allowNull: false },
-  name: { type: DataTypes.STRING, allowNull: false },
-  address: { type: DataTypes.STRING, allowNull: false },
-  city: { type: DataTypes.STRING, allowNull: false },
-  state: { type: DataTypes.STRING(2), allowNull: false },
-  zip: { type: DataTypes.STRING(5), allowNull: false },
-  phone: { type: DataTypes.STRING(12), allowNull: false },
-  category: { type: DataTypes.STRING, allowNull: false },
-  subcategory: { type: DataTypes.STRING, allowNull: false },
-  website: { type: DataTypes.STRING, allowNull: true },
-  email: { type: DataTypes.STRING, allowNull: true },
-});
+const { getDbReference } = require("../lib/mongo");
+const { extractValidFields } = require("../lib/validation");
 
 /*
- * Set up one-to-many relationship between Business and Photo.
+ * Schema describing required/optional fields of a business object.
  */
-Business.hasMany(Photo, { foreignKey: { allowNull: false } });
-Photo.belongsTo(Business);
+const BusinessSchema = {
+  name: { required: true },
+  address: { required: true },
+  city: { required: true },
+  state: { required: true },
+  zip: { required: true },
+  category: { required: true },
+  subcategory: { required: true },
+  website: { required: false },
+  email: { required: false },
+};
+exports.BusinessSchema = BusinessSchema;
 
 /*
- * Set up one-to-many relationship between Business and Photo.
+ * Executes a DB query to return a single page of businesses.  Returns a
+ * Promise that resolves to an array containing the fetched page of businesses.
  */
-Business.hasMany(Review, { foreignKey: { allowNull: false } });
-Review.belongsTo(Business);
+async function getBusinessesPage(page) {
+  const db = getDbReference();
+  const collection = db.collection("businesses");
+  const count = await collection.countDocuments();
 
-exports.Business = Business;
+  /*
+   * Compute last page number and make sure page is within allowed bounds.
+   * Compute offset into collection.
+   */
+  const pageSize = 10;
+  const lastPage = Math.ceil(count / pageSize);
+  page = page > lastPage ? lastPage : page;
+  page = page < 1 ? 1 : page;
+  const offset = (page - 1) * pageSize;
+
+  const results = await collection
+    .find({})
+    .sort({ _id: 1 })
+    .skip(offset)
+    .limit(pageSize)
+    .toArray();
+
+  return {
+    businesses: results,
+    page: page,
+    totalPages: lastPage,
+    pageSize: pageSize,
+    count: count,
+  };
+}
+exports.getBusinessesPage = getBusinessesPage;
 
 /*
- * Export an array containing the names of fields the client is allowed to set
- * on businesses.
+ * Executes a DB query to insert a new business into the database.  Returns
+ * a Promise that resolves to the ID of the newly-created business entry.
  */
-exports.BusinessClientFields = [
-  "ownerId",
-  "name",
-  "address",
-  "city",
-  "state",
-  "zip",
-  "phone",
-  "category",
-  "subcategory",
-  "website",
-  "email",
-];
+async function insertNewBusiness(business) {
+  business = extractValidFields(business, BusinessSchema);
+  const db = getDbReference();
+  const collection = db.collection("businesses");
+  const result = await collection.insertOne(business);
+  return result.insertedId;
+}
+exports.insertNewBusiness = insertNewBusiness;
+
+/*
+ * Executes a DB query to fetch detailed information about a single
+ * specified business based on its ID, including photo data for
+ * the business.  Returns a Promise that resolves to an object containing
+ * information about the requested business.  If no business with the
+ * specified ID exists, the returned Promise will resolve to null.
+ */
+async function getBusinessById(id) {
+  const db = getDbReference();
+  const collection = db.collection("businesses");
+  if (!ObjectId.isValid(id)) {
+    return null;
+  } else {
+    const results = await collection
+      .aggregate([
+        { $match: { _id: new ObjectId(id) } },
+        {
+          $lookup: {
+            from: "photos",
+            localField: "_id",
+            foreignField: "businessId",
+            as: "photos",
+          },
+        },
+      ])
+      .toArray();
+    return results[0];
+  }
+}
+exports.getBusinessById = getBusinessById;
+
+/*
+ * Executes a DB query to bulk insert an array new business into the database.
+ * Returns a Promise that resolves to a map of the IDs of the newly-created
+ * business entries.
+ */
+async function bulkInsertNewBusinesses(businesses) {
+  const businessesToInsert = businesses.map(function (business) {
+    return extractValidFields(business, BusinessSchema);
+  });
+  const db = getDbReference();
+  const collection = db.collection("businesses");
+  const result = await collection.insertMany(businessesToInsert);
+  return result.insertedIds;
+}
+exports.bulkInsertNewBusinesses = bulkInsertNewBusinesses;
