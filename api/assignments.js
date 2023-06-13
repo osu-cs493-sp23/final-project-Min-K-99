@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { connectToDb } = require("./lib/mongo");
+const { connectToDb } = require("../lib/mongo");
 
 const { Photo, PhotoClientFields } = require("../models/course");
 
