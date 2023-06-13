@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { connectToDb } = require("./lib/mongo");
+const { connectToDb } = require("../lib/mongo");
 
 const { Business, BusinessClientFields } = require("../models/assignment");
 const { Photo } = require("../models/course");

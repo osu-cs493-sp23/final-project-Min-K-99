@@ -19,7 +19,7 @@ const BusinessSchema = {
   category: { required: true },
   subcategory: { required: true },
   website: { required: false },
-  email: { required: false },
+  email: { required: false }
 };
 exports.BusinessSchema = BusinessSchema;
 
