@@ -38,42 +38,6 @@ exports.insertNewUser = insertNewUser;
  * information about the requested business.  If no business with the
  * specified ID exists, the returned Promise will resolve to null.
  */
-async function getBusinessById(id) {
-  const db = getDbReference();
-  const collection = db.collection("businesses");
-  if (!ObjectId.isValid(id)) {
-    return null;
-  } else {
-    const results = await collection
-      .aggregate([
-        { $match: { _id: new ObjectId(id) } },
-        {
-          $lookup: {
-            from: "photos",
-            localField: "_id",
-            foreignField: "businessId",
-            as: "photos",
-          },
-        },
-      ])
-      .toArray();
-    return results[0];
-  }
+async function getUserById(id) {
 }
-exports.getBusinessById = getBusinessById;
-
-/*
- * Executes a DB query to bulk insert an array new business into the database.
- * Returns a Promise that resolves to a map of the IDs of the newly-created
- * business entries.
- */
-async function bulkInsertNewBusinesses(businesses) {
-  const businessesToInsert = businesses.map(function (business) {
-    return extractValidFields(business, BusinessSchema);
-  });
-  const db = getDbReference();
-  const collection = db.collection("businesses");
-  const result = await collection.insertMany(businessesToInsert);
-  return result.insertedIds;
-}
-exports.bulkInsertNewBusinesses = bulkInsertNewBusinesses;
+exports.getUserById = getUserById;
