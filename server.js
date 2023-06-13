@@ -10,7 +10,7 @@ const express = require('express')
 const morgan = require('morgan')
 
 const api = require('./api')
-const sequelize = require('./lib/sequelize')
+const { connectToDb } = require("./lib/mongo");
 
 const app = express()
 const port = process.env.PORT || 8000
@@ -50,8 +50,8 @@ app.use('*', function (err, req, res, next) {
  * Start the API server listening for requests after establishing a connection
  * to the MySQL server.
  */
-sequelize.sync().then(function () {
-  app.listen(port, function() {
-    console.log("== Server is running on port", port)
-  })
-})
+connectToDb(async function () {
+  app.listen(port, function () {
+    console.log("== Server is running on port", port);
+  });
+});
