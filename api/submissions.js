@@ -18,37 +18,37 @@ router.post("/", async function (req, res, next) {
 /*
  * Route to fetch info about a specific business.
  */
-router.get("/:courseId", async function (req, res, next) {
+router.get("/:submissionId", async function (req, res, next) {
 });
 
 /*
  * Route to update data for a business.
  */
-router.patch("/:courseId", async function (req, res, next) {
+router.patch("/:submissionId", async function (req, res, next) {
 });
 
 /*
  * Route to delete a business.
  */
-router.get("/:courseId/students", async function (req, res, next) {
+router.get("/:submissionId/students", async function (req, res, next) {
 });
 
 /*
  * Route to delete a business.
  */
-router.post("/:courseId/students", async function (req, res, next) {
+router.post("/:submissionId/students", async function (req, res, next) {
 });
 
 /*
  * Route to delete a business.
  */
-router.get("/:courseId/roster", async function (req, res, next) {
+router.get("/:submissionId/roster", async function (req, res, next) {
 });
 
 /*
  * Route to delete a business.
  */
-router.get("/:courseId/assignments", async function (req, res, next) {
+router.get("/:submissionId/assignments", async function (req, res, next) {
 });
 
 module.exports = router;
