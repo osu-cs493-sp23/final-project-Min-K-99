@@ -2,8 +2,16 @@ const { Router } = require("express");
 const { getDbReference } = require("../lib/mongo");
 const { validateAgainstSchema } = require("../lib/validation");
 
-const { AssignmentSchema, SubmissionSchema, insertNewAssignment, insertNewSubmission, getAssignmentById, getSubmissionById, deleteAssignmentById } = require("../models/assignment");
+const { AssignmentSchema, SubmissionSchema, insertNewAssignment, insertNewSubmission, getAssignmentById, getSubmissionById, updateAssignmentById, deleteAssignmentById } = require("../models/assignment");
 const { UserSchema, insertNewUser, getUserById, getUserByEmail, validateUser, getUserIdManual } = require('../models/user')
+const {
+    getCoursePage,
+    insertNewCourse,
+    CourseSchema,
+    getCourseById,
+    updateCourseById,
+    deleteCourseById,
+  } = require("../models/course");
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth");
 const { ObjectId } = require("bson");
@@ -16,8 +24,9 @@ router.post("/", requireAuthentication, async function (req, res, next) {
 
     //Check the role of user based on token
     const user = await getUserById(req.user)
+    const idCheck = await getCourseById(req.body.courseId)
     
-    if(user.role === "instructor" || user.role === "admin"){
+    if(user.role === "admin" || (user.role === "instructor" && user._id.toString() === idCheck.instructorId)){
         if(validateAgainstSchema(req.body, AssignmentSchema)){
             try{
                 const id = await insertNewAssignment(req.body)
@@ -64,23 +73,53 @@ router.get("/:assignmentId", requireAuthentication, async function (req, res, ne
  * Route to update an assignment based on assignmentId
  */
 router.patch("/:assignmentId", requireAuthentication, async function (req, res, next) {
+    //Check user role
+    const user = await getUserById(req.user)
+    const getInstructorId = await getAssignmentById(req.params.assignmentId)
+    const idCheck = await getCourseById(getInstructorId.courseId)
+
+    if(user.role === "admin" || (user.role === "instructor" && user._id.toString() == idCheck.instructorId)){
+        try{
+            const result = await updateAssignmentById(req.params.assignmentId, req.body)
+            res.status(200).send({
+                msg: "Patch Succeeded."
+            })
+        } catch(e) {
+            next(e)
+        }
+    } else {
+        res.status(403).send({
+            msg : "Need to be either admin or instructor of the course to edit assignment information."
+        })
+    }
 });
 
 /*
  * Route to delete an assignment based on assignmentId
  */
 router.delete("/:assignmentId", requireAuthentication, async function (req, res, next) {
-    try{
-        const assignment = await deleteAssignmentById(req.params.assignmentId)
-        if(assignment){
-            res.status(200).send({
-                msg: "SUCCEEDED"
-            })
-        } else {
-            next()
+    //Check user role and/or Id for course
+    const user = await getUserById(req.user)
+    const getinstructorId = await getAssignmentById(req.params.assignmentId)
+    const idCheck = await getCourseById(getinstructorId.courseId)
+
+    if(user.role === "admin" || (user.role === "instructor" && user._id.toString() === idCheck.instructorId)){
+        try{
+            const assignment = await deleteAssignmentById(req.params.assignmentId)
+            if(assignment){
+                res.status(200).send({
+                    msg: "SUCCEEDED"
+                })
+            } else {
+                next()
+            }
+        } catch (e) {
+            next(e)
         }
-    } catch (e) {
-        next(e)
+    } else {
+        res.status(403).send({
+            error: "Need to be either admin or instructor of course to edit assignment information."
+        })
     }
 });
 
