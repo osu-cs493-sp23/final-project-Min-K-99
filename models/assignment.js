@@ -98,15 +98,17 @@ exports.getSubmissionById = getSubmissionById;
 /*
  * Not yet working Patch Endpoint
  */
-async function updateAssignmentById(id){
-  // const db = getDbReference()
-  // const collection = db.collection('assignments')
-
-  // if(!ObjectId.isValid(id)){
-  //   return null
-  // } else {
-  //   const results = await collection.up
-  // }
+async function updateAssignmentById(id, updateData){
+  const db = getDbReference()
+  const collection = db.collection("assignments")
+  if(!ObjectId.isValid(id)){
+    return null
+  } else {
+    const results = await collection.updateOne(
+      {_id: new ObjectId(id)},
+      { $set: updateData}
+    )
+  }
 }
 exports.updateAssignmentById = updateAssignmentById
 
