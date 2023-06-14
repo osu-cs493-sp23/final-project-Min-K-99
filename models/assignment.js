@@ -53,3 +53,17 @@ async function getAssignmentById(id) {
   }
 }
 exports.getAssignmentById = getAssignmentById;
+
+/*
+ * Not yet working Patch Endpoint
+ */
+async function updateAssignmentById(id){
+  // const db = getDbReference()
+  // const collection = db.collection('assignments')
+
+  // if(!ObjectId.isValid(id)){
+  //   return null
+  // } else {
+  //   const results = await collection.up
+  // }
+}

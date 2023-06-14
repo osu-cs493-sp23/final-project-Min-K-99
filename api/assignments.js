@@ -34,7 +34,10 @@ router.get("/:assignmentId", async function (req, res, next) {
         const assignment = await getAssignmentById(req.params.assignmentId)
         if(assignment){
             res.status(200).send({
-                assignment : assignment
+                courseId : assignment.courseId,
+                title : assignment.title,
+                poitns: assignment.points,
+                due: assignment.due
             })
         } else {
             next()
