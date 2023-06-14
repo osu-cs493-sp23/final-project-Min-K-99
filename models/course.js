@@ -11,10 +11,12 @@ const { extractValidFields } = require("../lib/validation");
  * Schema describing required/optional fields of a business object.
  */
 const CourseSchema = {
-  subjectCode: {required: true},
-  subjectNumber: {required: true},
-  subjectTitle: {required: true},
-  instructor: {required: true}
+  description: { required: false },
+  subject: { required: true },
+  number: { required: true },
+  title: { required: true },
+  term: { required: true },
+  instructorId: { required: true },
 };
 exports.CourseSchema = CourseSchema;
 
@@ -23,6 +25,34 @@ exports.CourseSchema = CourseSchema;
  * Promise that resolves to an array containing the fetched page of businesses.
  */
 async function getCoursePage(page) {
+  const db = getDbReference();
+  const collection = db.collection("courses");
+  const count = await collection.countDocuments();
+
+  /*
+   * Compute last page number and make sure page is within allowed bounds.
+   * Compute offset into collection.
+   */
+  const pageSize = 10;
+  const lastPage = Math.ceil(count / pageSize);
+  page = page > lastPage ? lastPage : page;
+  page = page < 1 ? 1 : page;
+  const offset = (page - 1) * pageSize;
+
+  const results = await collection
+    .find({})
+    .sort({ _id: 1 })
+    .skip(offset)
+    .limit(pageSize)
+    .toArray();
+
+  return {
+    courses: results,
+    page: page,
+    totalPages: lastPage,
+    pageSize: pageSize,
+    count: count,
+  };
 }
 exports.getCoursePage = getCoursePage;
 
@@ -46,8 +76,7 @@ exports.insertNewCourse = insertNewCourse;
  * information about the requested business.  If no business with the
  * specified ID exists, the returned Promise will resolve to null.
  */
-async function getCourseById(id) {
-}
+async function getCourseById(id) {}
 exports.getCourseById = getCourseById;
 
 /*
@@ -55,7 +84,7 @@ exports.getCourseById = getCourseById;
  * Returns a Promise that resolves to a map of the IDs of the newly-created
  * business entries.
  */
-async function bulkInsertNewCourse(courses) {
+async function bulkInsertNewCourses(courses) {
   const coursesToInsert = courses.map(function (course) {
     return extractValidFields(course, CourseSchema);
   });
@@ -64,4 +93,4 @@ async function bulkInsertNewCourse(courses) {
   const result = await collection.insertMany(coursesToInsert);
   return result.insertedIds;
 }
-exports.bulkInsertNewCourse = bulkInsertNewCourse;
+exports.bulkInsertNewCourses = bulkInsertNewCourses;
