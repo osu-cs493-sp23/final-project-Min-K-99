@@ -1,54 +1,91 @@
 const { Router } = require("express");
 const { connectToDb } = require("../lib/mongo");
 
+const {
+  getCoursePage,
+  insertNewCourse,
+  CourseSchema,
+} = require("../models/course");
+const {
+  extractValidFields,
+  validateAgainstSchema,
+} = require("../lib/validation");
+
 const router = Router();
 
 /*
- * Route to return a list of businesses.
+ * Route to return a list of courses.
  */
-router.get("/", async function (req, res) {
+router.get("/", async function (req, res, next) {
+  try {
+    /*
+     * Fetch page info, generate HATEOAS links for surrounding pages and then
+     * send response.
+     */
+    const coursePage = await getCoursePage(parseInt(req.query.page) || 1);
+    coursePage.links = {};
+    if (coursePage.page < coursePage.totalPages) {
+      coursePage.links.nextPage = `/courses?page=${coursePage.page + 1}`;
+      coursePage.links.lastPage = `/courses?page=${coursePage.totalPages}`;
+    }
+    if (coursePage.page > 1) {
+      coursePage.links.prevPage = `/courses?page=${coursePage.page - 1}`;
+      coursePage.links.firstPage = "/courses?page=1";
+    }
+    res.status(200).send(coursePage);
+  } catch (err) {
+    next(err);
+  }
 });
 
 /*
- * Route to create a new business.
+ * Route to create a new course.
  */
 router.post("/", async function (req, res, next) {
+  if (validateAgainstSchema(req.body, CourseSchema)) {
+    try {
+      const id = await insertNewCourse(req.body);
+      res.status(201).send({
+        id: id,
+      });
+    } catch (err) {
+      next(err);
+    }
+  } else {
+    res.status(400).send({
+      error: "Request body is not a valid course object.",
+    });
+  }
 });
 
 /*
- * Route to fetch info about a specific business.
+ * Route to fetch info about a specific course.
  */
-router.get("/:courseId", async function (req, res, next) {
-});
+router.get("/:courseId", async function (req, res, next) {});
 
 /*
- * Route to update data for a business.
+ * Route to update data for a course.
  */
-router.patch("/:courseId", async function (req, res, next) {
-});
+router.patch("/:courseId", async function (req, res, next) {});
 
 /*
- * Route to delete a business.
+ * Route to delete a course.
  */
-router.get("/:courseId/students", async function (req, res, next) {
-});
+router.get("/:courseId/students", async function (req, res, next) {});
 
 /*
- * Route to delete a business.
+ * Route to delete a course.
  */
-router.post("/:courseId/students", async function (req, res, next) {
-});
+router.post("/:courseId/students", async function (req, res, next) {});
 
 /*
- * Route to delete a business.
+ * Route to delete a course.
  */
-router.get("/:courseId/roster", async function (req, res, next) {
-});
+router.get("/:courseId/roster", async function (req, res, next) {});
 
 /*
- * Route to delete a business.
+ * Route to delete a course.
  */
-router.get("/:courseId/assignments", async function (req, res, next) {
-});
+router.get("/:courseId/assignments", async function (req, res, next) {});
 
 module.exports = router;
