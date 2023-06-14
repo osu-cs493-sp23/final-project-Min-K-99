@@ -13,10 +13,9 @@ const { extractValidFields } = require("../lib/validation");
  */
 const UserSchema = {
   name: {required: true},
+  email: {required: true},
   password: {required: true},
-  admin: {required: true},
-  instructor: {required: true},
-  student: {required: true}
+  role: {required: true}
 };
 exports.UserSchema = UserSchema;
 
@@ -29,7 +28,6 @@ exports.insertNewUser = async function (user) {
 
   const hash = await bcrypt.hash(userToInsert.password, 8)
   userToInsert.password = hash
-  console.log("  -- userToInsert:", userToInsert)
 
   const db = getDbReference()
   const collection = db.collection('users')
@@ -43,6 +41,7 @@ exports.insertNewUser = async function (user) {
 async function getUserById (id, includePassword) {
   const db = getDbReference()
   const collection = db.collection('users')
+
   if (!ObjectId.isValid(id)) {
       return null
   } else {
@@ -50,12 +49,32 @@ async function getUserById (id, includePassword) {
           .find({ _id: new ObjectId(id) })
           .project(includePassword ? {} : { password: 0 })
           .toArray()
+      
       return results[0]
   }
 }
 exports.getUserById = getUserById;
 
-exports.validateUser = async function (id, password) {
-  const user = await getUserById(id, true)
+async function getUserByEmail(email, includePassword){
+  const db = getDbReference()
+  const collection = db.collection('users')
+  
+  const results = await collection
+    .find({ email: email })
+    .project(includePassword ? {} : { password: 0 })
+    .toArray()
+  console.log("==results[0]:", results[0])
+  return results[0]
+}
+exports.getUserByEmail = getUserByEmail;
+
+exports.validateUser = async function (email, password) {
+  const user = await getUserByEmail(email, true)
   return user && await bcrypt.compare(password, user.password)
+}
+
+exports.getUserIdManual = async function(email, password){
+  const user = await getUserByEmail(email, true)
+  console.log("==user.id:", user._id.toString())
+  return user._id.toString()
 }
