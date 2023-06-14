@@ -1,6 +1,11 @@
 const { Router } = require("express");
 const { connectToDb } = require("../lib/mongo");
 
+const { generateAuthToken, requireAuthentication } = require("../lib/auth");
+
+const { UserSchema, insertNewUser, getUserById, getUserByEmail, validateUser, getUserIdManual } = require('../models/user')
+
+
 const {
   getCoursePage,
   insertNewCourse,
@@ -9,6 +14,7 @@ const {
   updateCourseById,
   deleteCourseById,
 } = require("../models/course");
+
 const {
   extractValidFields,
   validateAgainstSchema,
@@ -44,20 +50,30 @@ router.get("/", async function (req, res, next) {
 /*
  * Route to create a new course.
  */
-router.post("/", async function (req, res, next) {
-  if (validateAgainstSchema(req.body, CourseSchema)) {
-    try {
-      const id = await insertNewCourse(req.body);
-      res.status(201).send({
-        id: id,
+router.post("/", requireAuthentication, async function (req, res, next) {
+  
+  //Check the role of user based on token
+  const user = await getUserById(req.user)
+  
+  if(user.role === "admin"){
+    if (validateAgainstSchema(req.body, CourseSchema)) {
+      try {
+        const id = await insertNewCourse(req.body);
+        res.status(201).send({
+          id: id,
+        });
+      } catch (err) {
+        next(err);
+      }
+    } else {
+      res.status(400).send({
+        error: "Request body is not a valid course object.",
       });
-    } catch (err) {
-      next(err);
     }
   } else {
-    res.status(400).send({
-      error: "Request body is not a valid course object.",
-    });
+    res.status(403).send({
+      error: "Need to be admin to post course."
+    })
   }
 });
 
@@ -80,31 +96,54 @@ router.get("/:courseId", async function (req, res, next) {
 /*
  * Route to update data for a course.
  */
-router.patch("/:courseId", async function (req, res, next) {
-  try {
-    const result = await updateCourseById(req.params.courseId, req.body);
-    res.status(200).send(`Your data is modified`);
-  } catch (err) {
-    next(err);
+router.patch("/:courseId", requireAuthentication, async function (req, res, next) {
+  //check user role based on token
+  const user = await getUserById(req.user)
+  const idCheck = await getCourseById(req.params.courseId)
+
+  if(user.role === "admin" || (user.role === "instructor" && user._id.toString() === idCheck.instructorId)){
+    try {
+      const result = await updateCourseById(req.params.courseId, req.body);
+      res.status(200).send(`Your data is modified`);
+    } catch (err) {
+      next(err);
+    }
+  } else {
+    res.status(403).send({
+      error: "Need to be either admin or instructor of the course to patch course information."
+    })
   }
 });
 
 /*
  * Route to delete info about a specific course.
  */
-router.delete("/:courseId", async function (req, res, next) {
-  try {
-    const course = await deleteCourseById(req.params.courseId);
-    res.status(200).send(`Your data is deleted`);
-  } catch (err) {
-    next(err);
+router.delete("/:courseId", requireAuthentication, async function (req, res, next) {
+  //Check user role based on token
+  const user = await getUserById(req.user)
+  if(user.role === "admin"){
+    try {
+      const course = await deleteCourseById(req.params.courseId);
+      res.status(200).send(`Your data is deleted`);
+    } catch (err) {
+      next(err);
+    }
+  } else {
+    res.status(403).send({
+      error: "Need to be admin to delete courses."
+    })
   }
 });
 
 /*
  * Route to delete a course.
  */
-router.get("/:courseId/students", async function (req, res, next) {
+router.get("/:courseId/students", requireAuthentication, async function (req, res, next) {
+  //check user role based on token
+  const user = await getUserById(req.user)
+  const idCheck = await getCourseById(req.params.courseId)
+
+  if(user.role === "admin" || (user.role === "instructor" && user._id.toString() === idCheck.instructorId)){
     try {
       const course = await getCourseById(req.params.courseId);
       if (course) {
@@ -115,6 +154,11 @@ router.get("/:courseId/students", async function (req, res, next) {
     } catch (err) {
       next(err);
     }
+  } else {
+    res.status(403).send({
+      error: "Need to be either admin or instructor of the course to access the student information."
+    })
+  }
 });
 
 /*
