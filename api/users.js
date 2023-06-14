@@ -4,9 +4,10 @@ const router = Router();
 
 const { validateAgainstSchema } = require('../lib/validation')
 
-const { UserSchema, insertNewUser, getUserById, validateUser } = require('../models/user')
+const { UserSchema, insertNewUser, getUserById, getUserByEmail, validateUser, getUserIdManual } = require('../models/user')
 
-const { generateAuthToken, requireAuthentication } = require('../lib/auth')
+const { generateAuthToken, requireAuthentication } = require('../lib/auth');
+const { ObjectId } = require("mongodb");
 
 /*
  * Route to list all of a user's businesses.
@@ -32,14 +33,18 @@ router.post("/", async function (req, res, next) {
  * Server send back the token after giving clearance to id and password
  */
 router.post("/login", async function (req, res, next) {
-    if(req.body && req.body.id && req.body.password){
+    if(req.body && req.body.email && req.body.password){
         try{
             const authenticated = await validateUser(
-                req.body.id,
+                req.body.email,
                 req.body.password
             )
+            const manualId = await getUserIdManual(
+                req.body.email, 
+                req.body.password)
+            
             if (authenticated) {
-                const token = generateAuthToken(req.body.id)
+                const token = generateAuthToken(manualId)
                 res.status(200).send({
                     token: token
                 })
@@ -53,7 +58,7 @@ router.post("/login", async function (req, res, next) {
         }
     } else {
         res.status(400).send({
-            error: "Request body require `id` and `password`."
+            error: "Request body require `email` and `password`."
         })
     }
 });
@@ -66,7 +71,12 @@ router.get("/:userId", requireAuthentication, async function (req, res, next) {
         try {
             const user = await getUserById(req.params.userId)
             if (user) {
-                res.status(200).send(user)
+                res.status(200).send({
+                    name: user.name,
+                    email: user.email,
+                    password: user.password,
+                    role: user.role
+                })
             } else {
                 next()
             }
@@ -79,5 +89,4 @@ router.get("/:userId", requireAuthentication, async function (req, res, next) {
         })
     }
 });
-
 module.exports = router;
