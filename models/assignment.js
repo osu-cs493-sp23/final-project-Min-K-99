@@ -19,8 +19,6 @@ const AssignmentSchema = {
 exports.AssignmentSchema = AssignmentSchema;
 
 const SubmissionSchema = {
-  assignmentId: {required: true},
-  studentId: {required: true},
   timestamp: {required: true},
   grade: {required: true},
   file: {required: true}
@@ -82,12 +80,19 @@ async function getSubmissionById(id) {
   const collection = db.collection('submissions')
 
   const results = await collection
-    .find({_id: new ObjectId(id)})
-    .toArray()
+    .aggregate([
+      {$match: {_id: new ObjectId(id)}},
+      {$lookup: {
+        from: "submissions",
+        localField: "_id",
+        foreignField: "assignmentId",
+        as: "submissions"
+        }
+      }
+    ]).toArray()
   
   return results[0]
 }
-
 exports.getSubmissionById = getSubmissionById;
 
 /*
