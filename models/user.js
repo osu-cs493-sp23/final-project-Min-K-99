@@ -3,6 +3,7 @@
  */
 
 const { ObjectId } = require("mongodb");
+const bcrypt = require("bcryptjs")
 
 const { getDbReference } = require("../lib/mongo");
 const { extractValidFields } = require("../lib/validation");
@@ -11,33 +12,50 @@ const { extractValidFields } = require("../lib/validation");
  * Schema describing required/optional fields of a business object.
  */
 const UserSchema = {
+  name: {required: true},
+  password: {required: true},
   admin: {required: true},
   instructor: {required: true},
   student: {required: true}
 };
 exports.UserSchema = UserSchema;
 
-
 /*
  * Executes a DB query to insert a new business into the database.  Returns
  * a Promise that resolves to the ID of the newly-created business entry.
  */
-async function insertNewUser(user) {
-  user = extractValidFields(user, UserSchema);
-  const db = getDbReference();
-  const collection = db.collection("users");
-  const result = await collection.insertOne(user);
-  return result.insertedId;
+exports.insertNewUser = async function (user) {
+  const userToInsert = extractValidFields(user, UserSchema)
+
+  const hash = await bcrypt.hash(userToInsert.password, 8)
+  userToInsert.password = hash
+  console.log("  -- userToInsert:", userToInsert)
+
+  const db = getDbReference()
+  const collection = db.collection('users')
+  const result = await collection.insertOne(userToInsert)
+  return result.insertedId
 }
-exports.insertNewUser = insertNewUser;
 
 /*
- * Executes a DB query to fetch detailed information about a single
- * specified business based on its ID, including photo data for
- * the business.  Returns a Promise that resolves to an object containing
- * information about the requested business.  If no business with the
- * specified ID exists, the returned Promise will resolve to null.
+ * Fetch a user from the DB based on user ID.
  */
-async function getUserById(id) {
+async function getUserById (id, includePassword) {
+  const db = getDbReference()
+  const collection = db.collection('users')
+  if (!ObjectId.isValid(id)) {
+      return null
+  } else {
+      const results = await collection
+          .find({ _id: new ObjectId(id) })
+          .project(includePassword ? {} : { password: 0 })
+          .toArray()
+      return results[0]
+  }
 }
 exports.getUserById = getUserById;
+
+exports.validateUser = async function (id, password) {
+  const user = await getUserById(id, true)
+  return user && await bcrypt.compare(password, user.password)
+}
