@@ -5,6 +5,9 @@ const {
   getCoursePage,
   insertNewCourse,
   CourseSchema,
+  getCourseById,
+  updateCourseById,
+  deleteCourseById,
 } = require("../models/course");
 const {
   extractValidFields,
@@ -61,22 +64,65 @@ router.post("/", async function (req, res, next) {
 /*
  * Route to fetch info about a specific course.
  */
-router.get("/:courseId", async function (req, res, next) {});
+router.get("/:courseId", async function (req, res, next) {
+  try {
+    const course = await getCourseById(req.params.courseId);
+    if (course) {
+      res.status(200).send(course);
+    } else {
+      next();
+    }
+  } catch (err) {
+    next(err);
+  }
+});
 
 /*
  * Route to update data for a course.
  */
-router.patch("/:courseId", async function (req, res, next) {});
+router.patch("/:courseId", async function (req, res, next) {
+  try {
+    const result = await updateCourseById(req.params.courseId, req.body);
+    res.status(200).send(`Your data is modified`);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/*
+ * Route to delete info about a specific course.
+ */
+router.delete("/:courseId", async function (req, res, next) {
+  try {
+    const course = await deleteCourseById(req.params.courseId);
+    res.status(200).send(`Your data is deleted`);
+  } catch (err) {
+    next(err);
+  }
+});
 
 /*
  * Route to delete a course.
  */
-router.get("/:courseId/students", async function (req, res, next) {});
+router.get("/:courseId/students", async function (req, res, next) {
+    try {
+      const course = await getCourseById(req.params.courseId);
+      if (course) {
+        res.status(200).send(course);
+      } else {
+        next();
+      }
+    } catch (err) {
+      next(err);
+    }
+});
 
 /*
  * Route to delete a course.
  */
-router.post("/:courseId/students", async function (req, res, next) {});
+router.post("/:courseId/students", async function (req, res, next) {
+
+});
 
 /*
  * Route to delete a course.
