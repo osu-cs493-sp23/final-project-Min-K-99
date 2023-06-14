@@ -20,6 +20,14 @@ const CourseSchema = {
 };
 exports.CourseSchema = CourseSchema;
 
+const StudentSchema = {
+  name: { required: false },
+  email: { required: true },
+  password: { required: true },
+  role: { required: true },
+};
+exports.StudentSchema = StudentSchema;
+
 /*
  * Executes a DB query to return a single page of businesses.  Returns a
  * Promise that resolves to an array containing the fetched page of businesses.
@@ -76,8 +84,58 @@ exports.insertNewCourse = insertNewCourse;
  * information about the requested business.  If no business with the
  * specified ID exists, the returned Promise will resolve to null.
  */
-async function getCourseById(id) {}
+async function getCourseById(id) {
+  const db = getDbReference();
+  const collection = db.collection("courses");
+  if (!ObjectId.isValid(id)) {
+    return null;
+  } else {
+    const results = await collection
+      .aggregate([{ $match: { _id: new ObjectId(id) } }])
+      .toArray();
+    return results[0];
+  }
+}
 exports.getCourseById = getCourseById;
+
+async function updateCourseById(id, updateData) {
+  const db = getDbReference();
+  const collection = db.collection("courses");
+  if (!ObjectId.isValid(id)) {
+    return null;
+  } else {
+    const results = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+  }
+}
+exports.updateCourseById = updateCourseById;
+
+async function deleteCourseById(id) {
+  const db = getDbReference();
+  const collection = db.collection("courses");
+  if (!ObjectId.isValid(id)) {
+    return null;
+  } else {
+    const results = await collection.deleteOne({ _id: new ObjectId(id) });
+  }
+}
+exports.deleteCourseById = deleteCourseById;
+
+async function getStudentsByCourseId(id) {
+  const db = getDbReference();
+  const collection = db.collection("courses");
+  if (!ObjectId.isValid(id)) {
+    return null;
+  } else {
+    const results = await collection
+      .aggregate([{ $match: { _id: new ObjectId(id) } }])
+      .toArray();
+    return results[0];
+  }
+}
+exports.getStudentsByCourseId = getStudentsByCourseId;
 
 /*
  * Executes a DB query to bulk insert an array new business into the database.
