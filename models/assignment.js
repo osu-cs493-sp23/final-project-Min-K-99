@@ -11,59 +11,25 @@ const { extractValidFields } = require("../lib/validation");
  * Schema describing required/optional fields of a assignment object.
  */
 const AssignmentSchema = {
+  courseId: {required: true},
   title: {required: true},
-  dueDate: {required: true}
+  points: {required: true},
+  due: {required: true}
 };
 exports.AssignmentSchema = AssignmentSchema;
 
 /*
- * Executes a DB query to return a single page of assignments.  Returns a
- * Promise that resolves to an array containing the fetched page of assignments.
+ * Insert new assignment into `assignments` collection
  */
-async function getAssignmentsPage(page) {
-  const db = getDbReference();
-  const collection = db.collection("assignments");
-  const count = await collection.countDocuments();
+exports.insertNewAssignment = async function (assignment) {
+  const assignmentToInsert = extractValidFields(assignment, AssignmentSchema)
 
-  /*
-   * Compute last page number and make sure page is within allowed bounds.
-   * Compute offset into collection.
-   */
-  const pageSize = 10;
-  const lastPage = Math.ceil(count / pageSize);
-  page = page > lastPage ? lastPage : page;
-  page = page < 1 ? 1 : page;
-  const offset = (page - 1) * pageSize;
-
-  const results = await collection
-    .find({})
-    .sort({ _id: 1 })
-    .skip(offset)
-    .limit(pageSize)
-    .toArray();
-
-  return {
-    assignments: results,
-    page: page,
-    totalPages: lastPage,
-    pageSize: pageSize,
-    count: count,
-  };
+  const db = getDbReference()
+  const collection = db.collection('assignments')
+  const result = await collection.insertOne(assignmentToInsert)
+  
+  return result.insertedId
 }
-exports.getAssignmentsPage = getAssignmentsPage;
-
-/*
- * Executes a DB query to insert a new assignment into the database.  Returns
- * a Promise that resolves to the ID of the newly-created assignment entry.
- */
-async function insertNewAssignment(assignment) {
-  assignment = extractValidFields(assignment, assignmentSchema);
-  const db = getDbReference();
-  const collection = db.collection("assignments");
-  const result = await collection.insertOne(assignment);
-  return result.insertedId;
-}
-exports.insertNewAssignment = insertNewAssignment;
 
 /*
  * Executes a DB query to fetch detailed information about a single
@@ -72,15 +38,32 @@ exports.insertNewAssignment = insertNewAssignment;
  * information about the requested assignment.  If no assignment with the
  * specified ID exists, the returned Promise will resolve to null.
  */
-async function getassignmentById(id) {
+async function getAssignmentById(id) {
+  const db = getDbReference()
+  const collection = db.collection('assignments')
+
+  if(!ObjectId.isValid(id)){
+    return null
+  } else {
+    const results = await collection
+      .find({_id: new ObjectId(id)})
+      .toArray()
+    
+    return results[0]
+  }
 }
-exports.getassignmentById = getassignmentById;
+exports.getAssignmentById = getAssignmentById;
 
 /*
- * Executes a DB query to bulk insert an array new assignment into the database.
- * Returns a Promise that resolves to a map of the IDs of the newly-created
- * assignment entries.
+ * Not yet working Patch Endpoint
  */
-async function bulkInsertNewassignments(assignments) {
+async function updateAssignmentById(id){
+  // const db = getDbReference()
+  // const collection = db.collection('assignments')
+
+  // if(!ObjectId.isValid(id)){
+  //   return null
+  // } else {
+  //   const results = await collection.up
+  // }
 }
-exports.bulkInsertNewassignments = bulkInsertNewassignments;

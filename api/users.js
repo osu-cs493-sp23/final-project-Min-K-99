@@ -10,7 +10,7 @@ const { generateAuthToken, requireAuthentication } = require('../lib/auth');
 const { ObjectId } = require("mongodb");
 
 /*
- * Route to list all of a user's businesses.
+ * Insert new user into `users` collection
  */
 router.post("/", async function (req, res, next) {
     if (validateAgainstSchema(req.body, UserSchema)){
@@ -29,8 +29,8 @@ router.post("/", async function (req, res, next) {
 
 /*
  * Endpoint for user login
- * User send id and password
- * Server send back the token after giving clearance to id and password
+ * User send email and password
+ * Server send back the token after giving clearance to email and password
  */
 router.post("/login", async function (req, res, next) {
     if(req.body && req.body.email && req.body.password){

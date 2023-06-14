@@ -20,8 +20,7 @@ const UserSchema = {
 exports.UserSchema = UserSchema;
 
 /*
- * Executes a DB query to insert a new business into the database.  Returns
- * a Promise that resolves to the ID of the newly-created business entry.
+ * Insert New User into `users` collection
  */
 exports.insertNewUser = async function (user) {
   const userToInsert = extractValidFields(user, UserSchema)
@@ -55,6 +54,9 @@ async function getUserById (id, includePassword) {
 }
 exports.getUserById = getUserById;
 
+/*
+ * Fetch a user from the DB based on user email.
+ */
 async function getUserByEmail(email, includePassword){
   const db = getDbReference()
   const collection = db.collection('users')
@@ -73,6 +75,9 @@ exports.validateUser = async function (email, password) {
   return user && await bcrypt.compare(password, user.password)
 }
 
+/*
+ * Fetch userId based on user email
+ */
 exports.getUserIdManual = async function(email, password){
   const user = await getUserByEmail(email, true)
   console.log("==user.id:", user._id.toString())
