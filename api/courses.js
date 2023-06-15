@@ -1,5 +1,7 @@
 const { Router } = require("express");
 const { connectToDb } = require("../lib/mongo");
+const createCsvWriter = require("csv-writer").createObjectCsvWriter;
+const fs = require("fs");
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth");
 
@@ -8,7 +10,7 @@ const {
   insertNewUser,
   getUserById,
   getUserByEmail,
-  getUserCoursesById, 
+  getUserCoursesById,
   insertCoursesToUser,
   deleteCourseFromUser,
   validateUser,
@@ -69,7 +71,7 @@ router.post("/", requireAuthentication, async function (req, res, next) {
     if (validateAgainstSchema(req.body, CourseSchema)) {
       try {
         const id = await insertNewCourse(req.body);
-        await insertCoursesToUser(req.body.instructorId, id.toString())
+        await insertCoursesToUser(req.body.instructorId, id.toString());
         res.status(201).send({
           id: id,
         });
@@ -147,7 +149,7 @@ router.delete(
     if (user.role === "admin") {
       try {
         const course = await deleteCourseById(req.params.courseId);
-        await deleteCourseFromUser(user._id.toString(), req.params.courseId)
+        await deleteCourseFromUser(user._id.toString(), req.params.courseId);
         res.status(200).send(`Your data is deleted`);
       } catch (err) {
         next(err);
@@ -179,9 +181,9 @@ router.get(
       try {
         const course = await getCourseById(req.params.courseId);
         if (course.student) {
-            const student = {
-                student: course.student
-            };
+          const student = {
+            student: course.student,
+          };
           res.status(200).send(student);
         } else {
           next();
@@ -199,35 +201,89 @@ router.get(
 );
 
 /*
- * Route to post a student.
+ * Route to post/enroll students in a course.
  */
-router.post("/:courseId/students", async function (req, res, next) {
-  //Check the role of user based on token
-  const user = await getUserById(req.user, true);
+router.post(
+  "/:courseId/students",
+  requireAuthentication,
+  async function (req, res, next) {
+    //Check the role of user based on token
+    const user = await getUserById(req.user, true);
 
-  if (true) {
-    try {
-      const courseInfo = await getCourseById(req.params.courseId)
-      await insertNewStudentToCourse(req.params.courseId, req.body.add);
-      for(let i = 0; i < req.body.add.length; i++){
-        await insertCoursesToUser(req.body.add[i], req.params.courseId)
+    if (true) {
+      try {
+        const courseInfo = await getCourseById(req.params.courseId);
+        await insertNewStudentToCourse(req.params.courseId, req.body.add);
+        for (let i = 0; i < req.body.add.length; i++) {
+          await insertCoursesToUser(req.body.add[i], req.params.courseId);
+        }
+        await deleteStudentFromCourse(req.params.courseId, req.body.remove);
+        res.status(201).send("Students added and removed from course");
+      } catch (err) {
+        next(err);
       }
-      await deleteStudentFromCourse(req.params.courseId, req.body.remove);
-      res.status(201).send("Students added and removed from course");
-    } catch (err) {
-      next(err);
     }
-  } else {
-    res.status(403).send({
-      error: "Need to be admin to post course.",
-    });
   }
-});
+);
 
 /*
  * Route to delete a course.
  */
-router.get("/:courseId/roster", async function (req, res, next) {});
+router.get(
+  "/:courseId/roster",
+  requireAuthentication,
+  async function (req, res, next) {
+    try {
+      const course = await getCourseById(req.params.courseId);
+      if (course.student) {
+        const transformedArray = await Promise.all(
+          course.student.map(async (item) => {
+            const user = await getUserById(item);
+            return {
+              id: item,
+              name: user.name,
+              email: user.email,
+            };
+          })
+        );
+
+        const csvWriter = createCsvWriter({
+          path: "roster.csv",
+          header: [
+            { id: "id", title: "ID" },
+            { id: "name", title: "Name" },
+            { id: "email", title: "Email" },
+          ],
+        });
+        csvWriter
+          .writeRecords(transformedArray)
+          .then(() =>
+            fs.readFile("roster.csv", "utf8", (err, data) => {
+              if (err) {
+                console.error(err);
+                return;
+              }
+
+              const lines = data.split("\n");
+              const responseLines = [];
+              lines.forEach((line) => {
+                if (line.trim() !== "") {
+                  responseLines.push(line);
+                }
+              });
+
+              res.status(200).send(responseLines);
+            })
+          )
+          .catch((err) => console.error(err));
+      } else {
+        next();
+      }
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 /*
  * Route to delete a course.
