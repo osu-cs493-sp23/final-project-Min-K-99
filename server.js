@@ -6,10 +6,6 @@
  */
 require('dotenv').config()
 
-const jwt = require("jsonwebtoken")
-
-const secretKey = "SuperSecret"
-
 const express = require('express')
 const morgan = require('morgan')
 const redis = require('redis')
@@ -25,74 +21,6 @@ const redisPort = process.env.REDIS_PORT || "6379"
 const redisClient = redis.createClient({
   url: `redis://${redisHost}:${redisPort}`
 })
-
-const rateLimitWindowMillis = 60000
-const rateLimitMaxRequests = 10
-const correctRateLimit = 30
-const correctRateLimitRefreshRate = correctRateLimit / rateLimitWindowMillis  
-const rateLimitRefreshRate = rateLimitMaxRequests / rateLimitWindowMillis
-
-// async function rateLimit(req, res, next){
-//   const authHeader = req.get("Authorization") || ""
-//   const authHeaderParts = authHeader.split(" ")
-//   const token = authHeaderParts[0] === "Bearer" ?
-//       authHeaderParts[1] : null
-
-//   const isTokenValid = req.headers.authorization === authHeader
-//   const currentRateLimitMaxRequests = isTokenValid ? correctRateLimit : rateLimitMaxRequests
-//   const currentRateLimitRefreshRate = isTokenValid ? correctRateLimitRefreshRate : rateLimitRefreshRate
-//   console.log("OOGA BOOGA", currentRateLimitMaxRequests)
-
-//   let tokenBucket 
-//   try{
-//     tokenBucket = await redisClient.hGetAll(req.ip)
-//     // console.log("=====tokenBucket:", tokenBucket)
-//   }catch (e){
-//     next()
-//     return
-//   }
-
-//   tokenBucket = {
-//     tokens: parseFloat(tokenBucket.tokens) || currentRateLimitMaxRequests,
-//     last: parseInt(tokenBucket.last) || Date.now()
-//   }
-
-//   const timestamp = Date.now()
-//   const ellapsedMillis = timestamp - tokenBucket.last
-//   tokenBucket.tokens += ellapsedMillis * currentRateLimitRefreshRate
-//   tokenBucket.tokens = Math.min(tokenBucket.tokens, currentRateLimitMaxRequests)
-//   tokenBucket.last = timestamp
-
-//   if(tokenBucket.tokens >= 1){
-//     tokenBucket.tokens -= 1
-//     await redisClient.hSet(req.ip, [
-//       ["tokens", tokenBucket.tokens],
-//       ["last", tokenBucket.last]
-//     ])
-//     next()
-//   } else{
-//     await redisClient.hSet(req.ip, [
-//       ["tokens", tokenBucket.tokens],
-//       ["last", tokenBucket.last]
-//     ])
-//     res.status(429).send({
-//       error: "Too many requests per minute"
-//     })
-//   }
-// }
-
-// const endpointsRequiringToken = ['/users/:userId']
-// function applyRateLimit(req, res, next){
-//   const requiresToken = endpointsRequiringToken.includes(req.path)
-//   if (requiresToken){
-//     rateLimit(req, res, next)
-//   }
-//   else{
-//     next();
-//   }
-// }
-
-// app.use(rateLimit)
 
 /*
  * Morgan is a popular request logger.
