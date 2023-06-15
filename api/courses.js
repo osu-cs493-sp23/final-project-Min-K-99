@@ -8,6 +8,9 @@ const {
   insertNewUser,
   getUserById,
   getUserByEmail,
+  getUserCoursesById, 
+  insertCoursesToUser,
+  deleteCourseFromUser,
   validateUser,
   getUserIdManual,
 } = require("../models/user");
@@ -66,6 +69,7 @@ router.post("/", requireAuthentication, async function (req, res, next) {
     if (validateAgainstSchema(req.body, CourseSchema)) {
       try {
         const id = await insertNewCourse(req.body);
+        await insertCoursesToUser(req.body.instructorId, id.toString())
         res.status(201).send({
           id: id,
         });
@@ -143,6 +147,7 @@ router.delete(
     if (user.role === "admin") {
       try {
         const course = await deleteCourseById(req.params.courseId);
+        await deleteCourseFromUser(user._id.toString(), req.params.courseId)
         res.status(200).send(`Your data is deleted`);
       } catch (err) {
         next(err);
@@ -202,7 +207,11 @@ router.post("/:courseId/students", async function (req, res, next) {
 
   if (true) {
     try {
+      const courseInfo = await getCourseById(req.params.courseId)
       await insertNewStudentToCourse(req.params.courseId, req.body.add);
+      for(let i = 0; i < req.body.add.length; i++){
+        await insertCoursesToUser(req.body.add[i], req.params.courseId)
+      }
       await deleteStudentFromCourse(req.params.courseId, req.body.remove);
       res.status(201).send("Students added and removed from course");
     } catch (err) {

@@ -4,7 +4,7 @@ const router = Router();
 
 const { validateAgainstSchema } = require('../lib/validation')
 
-const { UserSchema, insertNewUser, getUserById, getUserByEmail, validateUser, getUserIdManual } = require('../models/user')
+const { UserSchema, insertNewUser, getUserById, getUserByEmail, getUserCoursesById, validateUser, getUserIdManual } = require('../models/user')
 
 const { generateAuthToken, requireAuthentication } = require('../lib/auth');
 const { ObjectId } = require("mongodb");
@@ -70,22 +70,34 @@ router.get("/:userId", requireAuthentication, async function (req, res, next) {
     if(req.user === req.params.userId){
         try {
             const user = await getUserById(req.params.userId)
-            if (user) {
-                res.status(200).send({
-                    name: user.name,
-                    email: user.email,
-                    password: user.password,
-                    role: user.role
-                })
-            } else {
-                next()
+            switch(user.role){
+                case "admin":
+                    res.status(200).send({
+                        name: user.name,
+                        email: user.email,
+                        role: user.role
+                    });
+                case "instructor":
+                    res.status(200).send({
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        courses: user.courses
+                    });
+                case "student":
+                    res.status(200).send({
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        courses: user.courses
+                    });
             }
         } catch (e) {
             next(e)
         }
     } else {
         res.status(403).send({
-            error: "Unauthorized to access the specified resource."
+            error: "Wrong Token Or File does not exist"
         })
     }
 });

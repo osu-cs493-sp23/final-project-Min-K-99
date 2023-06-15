@@ -15,7 +15,8 @@ const UserSchema = {
   name: {required: true},
   email: {required: true},
   password: {required: true},
-  role: {required: true}
+  role: {required: true},
+  courses: {required: false}
 };
 exports.UserSchema = UserSchema;
 
@@ -69,6 +70,41 @@ async function getUserByEmail(email, includePassword){
   return results[0]
 }
 exports.getUserByEmail = getUserByEmail;
+
+/* 
+* This function will add courses to user.body's course array.
+*/
+exports.insertCoursesToUser = async function(id, courseId){
+  const db = getDbReference()
+  const collection = db.collection('users')
+
+  if(!ObjectId.isValid(id)){
+    return null
+  } else {
+    await collection.updateOne(
+      {_id: new ObjectId(id)},
+      {$push: {courses: courseId}}
+    )
+  }
+}
+
+/* 
+* This function will remove courses to user.body's course array.
+*/
+exports.deleteCourseFromUser = async function(id, courseId) {
+  const db = getDbReference();
+  const collection = db.collection("users");
+ 
+  if(!ObjectId.isValid(id)){
+    return null
+  } else {
+    await collection.updateOne(
+      {_id: new ObjectId(id)},
+      {$pull: {courses: courseId}}
+    )
+  }
+}
+
 
 exports.validateUser = async function (email, password) {
   const user = await getUserByEmail(email, true)
