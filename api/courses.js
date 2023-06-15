@@ -4,7 +4,7 @@ const createCsvWriter = require("csv-writer").createObjectCsvWriter;
 const fs = require("fs");
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth");
-
+const { rateLimit } = require('../lib/rateLimit')
 const {
   UserSchema,
   insertNewUser,

@@ -7,6 +7,7 @@ const { validateAgainstSchema } = require('../lib/validation')
 const { UserSchema, insertNewUser, getUserById, getUserByEmail, getUserCoursesById, validateUser, getUserIdManual } = require('../models/user')
 
 const { generateAuthToken, requireAuthentication } = require('../lib/auth');
+const { rateLimit } = require('../lib/rateLimit')
 const { ObjectId } = require("mongodb");
 
 /*
@@ -66,7 +67,7 @@ router.post("/login", async function (req, res, next) {
 /*
  * Endpoint to get user's information based on userId
  */
-router.get("/:userId", requireAuthentication, async function (req, res, next) {
+router.get("/:userId", rateLimit, requireAuthentication, async function (req, res, next) {
     if(req.user === req.params.userId){
         try {
             const user = await getUserById(req.params.userId)
