@@ -75,7 +75,7 @@ exports.getAssignmentById = getAssignmentById;
  * information about the requested assignment.  If no assignment with the
  * specified ID exists, the returned Promise will resolve to null.
  */
-async function getSubmissionById(id) {
+async function getSubmissionsById(id) {
   const db = getDbReference()
   const collection = db.collection('submissions')
 
@@ -93,7 +93,7 @@ async function getSubmissionById(id) {
   
   return results[0]
 }
-exports.getSubmissionById = getSubmissionById;
+exports.getSubmissionsById = getSubmissionsById;
 
 /*
  * Not yet working Patch Endpoint

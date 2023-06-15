@@ -2,8 +2,8 @@ const { Router } = require("express");
 const { getDbReference } = require("../lib/mongo");
 const { validateAgainstSchema } = require("../lib/validation");
 
-const { AssignmentSchema, SubmissionSchema, insertNewAssignment, insertNewSubmission, getAssignmentById, getSubmissionById, updateAssignmentById, deleteAssignmentById } = require("../models/assignment");
-const { UserSchema, insertNewUser, getUserById, getUserByEmail, validateUser, getUserIdManual } = require('../models/user')
+const { AssignmentSchema, SubmissionSchema, insertNewAssignment, insertNewSubmission, getAssignmentById, getSubmissionsById, updateAssignmentById, deleteAssignmentById } = require("../models/assignment");
+const { UserSchema, insertNewUser, getUserById, getUserByEmail, insertCoursesToUser, validateUser, getUserIdManual } = require('../models/user')
 const {
     getCoursePage,
     insertNewCourse,
@@ -43,7 +43,7 @@ router.post("/", requireAuthentication, async function (req, res, next) {
         }
     } else {
         res.status(403).send({
-            error: "Unable to access the specificed resource."
+            error: "Need to be either admin or user of the course to post an assignment."
         })
     }
 });
@@ -132,7 +132,7 @@ router.get("/:assignmentId/submissions", requireAuthentication, async function (
 
     if(user.role === "admin" || user.role === "instructor"){
         try{
-            const submission = await getSubmissionById(req.params.assignmentId)
+            const submission = await getSubmissionsById(req.params.assignmentId)
             if(submission){
                 res.status(200).send(submission)
             } else {
