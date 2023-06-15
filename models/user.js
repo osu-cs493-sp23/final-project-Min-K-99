@@ -3,6 +3,7 @@
  */
 
 const { ObjectId } = require("mongodb");
+const bcrypt = require("bcryptjs")
 
 const { getDbReference } = require("../lib/mongo");
 const { extractValidFields } = require("../lib/validation");
@@ -10,111 +11,111 @@ const { extractValidFields } = require("../lib/validation");
 /*
  * Schema describing required/optional fields of a business object.
  */
-const BusinessSchema = {
-  name: { required: true },
-  address: { required: true },
-  city: { required: true },
-  state: { required: true },
-  zip: { required: true },
-  category: { required: true },
-  subcategory: { required: true },
-  website: { required: false },
-  email: { required: false },
+const UserSchema = {
+  name: {required: true},
+  email: {required: true},
+  password: {required: true},
+  role: {required: true},
+  courses: {required: false}
 };
-exports.BusinessSchema = BusinessSchema;
+exports.UserSchema = UserSchema;
 
 /*
- * Executes a DB query to return a single page of businesses.  Returns a
- * Promise that resolves to an array containing the fetched page of businesses.
+ * Insert New User into `users` collection
  */
-async function getBusinessesPage(page) {
-  const db = getDbReference();
-  const collection = db.collection("businesses");
-  const count = await collection.countDocuments();
+exports.insertNewUser = async function (user) {
+  const userToInsert = extractValidFields(user, UserSchema)
 
-  /*
-   * Compute last page number and make sure page is within allowed bounds.
-   * Compute offset into collection.
-   */
-  const pageSize = 10;
-  const lastPage = Math.ceil(count / pageSize);
-  page = page > lastPage ? lastPage : page;
-  page = page < 1 ? 1 : page;
-  const offset = (page - 1) * pageSize;
+  const hash = await bcrypt.hash(userToInsert.password, 8)
+  userToInsert.password = hash
 
-  const results = await collection
-    .find({})
-    .sort({ _id: 1 })
-    .skip(offset)
-    .limit(pageSize)
-    .toArray();
-
-  return {
-    businesses: results,
-    page: page,
-    totalPages: lastPage,
-    pageSize: pageSize,
-    count: count,
-  };
+  const db = getDbReference()
+  const collection = db.collection('users')
+  const result = await collection.insertOne(userToInsert)
+  return result.insertedId
 }
-exports.getBusinessesPage = getBusinessesPage;
 
 /*
- * Executes a DB query to insert a new business into the database.  Returns
- * a Promise that resolves to the ID of the newly-created business entry.
+ * Fetch a user from the DB based on user ID.
  */
-async function insertNewBusiness(business) {
-  business = extractValidFields(business, BusinessSchema);
-  const db = getDbReference();
-  const collection = db.collection("businesses");
-  const result = await collection.insertOne(business);
-  return result.insertedId;
-}
-exports.insertNewBusiness = insertNewBusiness;
+async function getUserById (id, includePassword) {
+  const db = getDbReference()
+  const collection = db.collection('users')
 
-/*
- * Executes a DB query to fetch detailed information about a single
- * specified business based on its ID, including photo data for
- * the business.  Returns a Promise that resolves to an object containing
- * information about the requested business.  If no business with the
- * specified ID exists, the returned Promise will resolve to null.
- */
-async function getBusinessById(id) {
-  const db = getDbReference();
-  const collection = db.collection("businesses");
   if (!ObjectId.isValid(id)) {
-    return null;
+      return null
   } else {
-    const results = await collection
-      .aggregate([
-        { $match: { _id: new ObjectId(id) } },
-        {
-          $lookup: {
-            from: "photos",
-            localField: "_id",
-            foreignField: "businessId",
-            as: "photos",
-          },
-        },
-      ])
-      .toArray();
-    return results[0];
+      const results = await collection
+          .find({ _id: new ObjectId(id) })
+          .project(includePassword ? {} : { password: 0 })
+          .toArray()
+      
+      return results[0]
   }
 }
-exports.getBusinessById = getBusinessById;
+exports.getUserById = getUserById;
 
 /*
- * Executes a DB query to bulk insert an array new business into the database.
- * Returns a Promise that resolves to a map of the IDs of the newly-created
- * business entries.
+ * Fetch a user from the DB based on user email.
  */
-async function bulkInsertNewBusinesses(businesses) {
-  const businessesToInsert = businesses.map(function (business) {
-    return extractValidFields(business, BusinessSchema);
-  });
-  const db = getDbReference();
-  const collection = db.collection("businesses");
-  const result = await collection.insertMany(businessesToInsert);
-  return result.insertedIds;
+async function getUserByEmail(email, includePassword){
+  const db = getDbReference()
+  const collection = db.collection('users')
+  
+  const results = await collection
+    .find({ email: email })
+    .project(includePassword ? {} : { password: 0 })
+    .toArray()
+  console.log("==results[0]:", results[0])
+  return results[0]
 }
-exports.bulkInsertNewBusinesses = bulkInsertNewBusinesses;
+exports.getUserByEmail = getUserByEmail;
+
+/* 
+* This function will add courses to user.body's course array.
+*/
+exports.insertCoursesToUser = async function(id, courseId){
+  const db = getDbReference()
+  const collection = db.collection('users')
+
+  if(!ObjectId.isValid(id)){
+    return null
+  } else {
+    await collection.updateOne(
+      {_id: new ObjectId(id)},
+      {$push: {courses: courseId}}
+    )
+  }
+}
+
+/* 
+* This function will remove courses to user.body's course array.
+*/
+exports.deleteCourseFromUser = async function(id, courseId) {
+  const db = getDbReference();
+  const collection = db.collection("users");
+ 
+  if(!ObjectId.isValid(id)){
+    return null
+  } else {
+    await collection.updateOne(
+      {_id: new ObjectId(id)},
+      {$pull: {courses: courseId}}
+    )
+  }
+}
+
+
+exports.validateUser = async function (email, password) {
+  const user = await getUserByEmail(email, true)
+  return user && await bcrypt.compare(password, user.password)
+}
+
+/*
+ * Fetch userId based on user email
+ */
+exports.getUserIdManual = async function(email, password){
+  const user = await getUserByEmail(email, true)
+  console.log("==user.id:", user._id.toString())
+  return user._id.toString()
+}

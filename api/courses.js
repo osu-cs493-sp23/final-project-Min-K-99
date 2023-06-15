@@ -1,199 +1,237 @@
 const { Router } = require("express");
 const { connectToDb } = require("../lib/mongo");
 
-const { Business, BusinessClientFields } = require("../models/assignment");
-const { Photo } = require("../models/course");
-const { Review } = require("../models/user");
+const { generateAuthToken, requireAuthentication } = require("../lib/auth");
+
+const {
+  UserSchema,
+  insertNewUser,
+  getUserById,
+  getUserByEmail,
+  getUserCoursesById, 
+  insertCoursesToUser,
+  deleteCourseFromUser,
+  validateUser,
+  getUserIdManual,
+} = require("../models/user");
+
+const {
+  getCoursePage,
+  insertNewCourse,
+  CourseSchema,
+  getCourseById,
+  updateCourseById,
+  deleteCourseById,
+  insertNewStudentToCourse,
+  deleteStudentFromCourse,
+} = require("../models/course");
+
+const {
+  extractValidFields,
+  validateAgainstSchema,
+} = require("../lib/validation");
 
 const router = Router();
 
 /*
- * Route to return a list of businesses.
+ * Route to return a list of courses.
  */
-router.get("/", async function (req, res) {
-  /*
-   * Compute page number based on optional query string parameter `page`.
-   * Make sure page is within allowed bounds.
-   */
-  let page = parseInt(req.query.page) || 1;
-  page = page < 1 ? 1 : page;
-  const numPerPage = 10;
-  const offset = (page - 1) * numPerPage;
-
+router.get("/", async function (req, res, next) {
   try {
-    const result = await Business.findAndCountAll({
-      limit: numPerPage,
-      offset: offset,
-    });
-
     /*
-     * Generate HATEOAS links for surrounding pages.
+     * Fetch page info, generate HATEOAS links for surrounding pages and then
+     * send response.
      */
-    const lastPage = Math.ceil(result.count / numPerPage);
-    const links = {};
-    if (page < lastPage) {
-      links.nextPage = `/businesses?page=${page + 1}`;
-      links.lastPage = `/businesses?page=${lastPage}`;
+    const coursePage = await getCoursePage(parseInt(req.query.page) || 1);
+    coursePage.links = {};
+    if (coursePage.page < coursePage.totalPages) {
+      coursePage.links.nextPage = `/courses?page=${coursePage.page + 1}`;
+      coursePage.links.lastPage = `/courses?page=${coursePage.totalPages}`;
     }
-    if (page > 1) {
-      links.prevPage = `/businesses?page=${page - 1}`;
-      links.firstPage = "/businesses?page=1";
+    if (coursePage.page > 1) {
+      coursePage.links.prevPage = `/courses?page=${coursePage.page - 1}`;
+      coursePage.links.firstPage = "/courses?page=1";
     }
-
-    /*
-     * Construct and send response.
-     */
-    res.status(200).json({
-      businesses: result.rows,
-      pageNumber: page,
-      totalPages: lastPage,
-      pageSize: numPerPage,
-      totalCount: result.count,
-      links: links,
-    });
-  } catch (e) {
-    next(e);
+    res.status(200).send(coursePage);
+  } catch (err) {
+    next(err);
   }
 });
 
 /*
- * Route to create a new business.
+ * Route to create a new course.
  */
-router.post("/", async function (req, res, next) {
-  try {
-    const business = await Business.create(req.body, BusinessClientFields);
-    res.status(201).send({ id: business.id });
-  } catch (e) {
-    if (e instanceof ValidationError) {
-      res.status(400).send({ error: e.message });
+router.post("/", requireAuthentication, async function (req, res, next) {
+  //Check the role of user based on token
+  const user = await getUserById(req.user);
+
+  if (user.role === "admin") {
+    if (validateAgainstSchema(req.body, CourseSchema)) {
+      try {
+        const id = await insertNewCourse(req.body);
+        await insertCoursesToUser(req.body.instructorId, id.toString())
+        res.status(201).send({
+          id: id,
+        });
+      } catch (err) {
+        next(err);
+      }
     } else {
-      next(e);
+      res.status(400).send({
+        error: "Request body is not a valid course object.",
+      });
     }
+  } else {
+    res.status(403).send({
+      error: "Need to be admin to post course.",
+    });
   }
 });
 
 /*
- * Route to fetch info about a specific business.
+ * Route to fetch info about a specific course.
  */
 router.get("/:courseId", async function (req, res, next) {
-  const businessId = req.params.businessId;
   try {
-    const business = await Business.findByPk(businessId, {
-      include: [Photo, Review],
-    });
-    if (business) {
-      res.status(200).send(business);
+    const course = await getCourseById(req.params.courseId);
+    if (course) {
+      res.status(200).send(course);
     } else {
       next();
     }
-  } catch (e) {
-    next(e);
+  } catch (err) {
+    next(err);
   }
 });
 
 /*
- * Route to update data for a business.
+ * Route to update data for a course.
  */
-router.patch("/:courseId", async function (req, res, next) {
-  const businessId = req.params.businessId;
-  try {
-    const result = await Business.update(req.body, {
-      where: { id: businessId },
-      fields: BusinessClientFields,
-    });
-    if (result[0] > 0) {
-      res.status(204).send();
+router.patch(
+  "/:courseId",
+  requireAuthentication,
+  async function (req, res, next) {
+    //check user role based on token
+    const user = await getUserById(req.user);
+    const idCheck = await getCourseById(req.params.courseId);
+
+    if (
+      user.role === "admin" ||
+      (user.role === "instructor" &&
+        user._id.toString() === idCheck.instructorId)
+    ) {
+      try {
+        const result = await updateCourseById(req.params.courseId, req.body);
+        res.status(200).send(`Your data is modified`);
+      } catch (err) {
+        next(err);
+      }
     } else {
-      next();
+      res.status(403).send({
+        error:
+          "Need to be either admin or instructor of the course to patch course information.",
+      });
     }
-  } catch (e) {
-    next(e);
   }
-});
+);
 
 /*
- * Route to delete a business.
+ * Route to delete info about a specific course.
  */
-router.delete("/:courseId", async function (req, res, next) {
-  const businessId = req.params.businessId;
-  try {
-    const result = await Business.destroy({ where: { id: businessId } });
-    if (result > 0) {
-      res.status(204).send();
+router.delete(
+  "/:courseId",
+  requireAuthentication,
+  async function (req, res, next) {
+    //Check user role based on token
+    const user = await getUserById(req.user);
+    if (user.role === "admin") {
+      try {
+        const course = await deleteCourseById(req.params.courseId);
+        await deleteCourseFromUser(user._id.toString(), req.params.courseId)
+        res.status(200).send(`Your data is deleted`);
+      } catch (err) {
+        next(err);
+      }
     } else {
-      next();
+      res.status(403).send({
+        error: "Need to be admin to delete courses.",
+      });
     }
-  } catch (e) {
-    next(e);
   }
-});
+);
 
 /*
- * Route to delete a business.
+ * Route to delete a course.
  */
-router.get("/:courseId/students", async function (req, res, next) {
-  const businessId = req.params.businessId;
-  try {
-    const result = await Business.destroy({ where: { id: businessId } });
-    if (result > 0) {
-      res.status(204).send();
+router.get(
+  "/:courseId/students",
+  requireAuthentication,
+  async function (req, res, next) {
+    //check user role based on token
+    const user = await getUserById(req.user);
+    const idCheck = await getCourseById(req.params.courseId);
+
+    if (
+      user.role === "admin" ||
+      (user.role === "instructor" &&
+        user._id.toString() === idCheck.instructorId)
+    ) {
+      try {
+        const course = await getCourseById(req.params.courseId);
+        if (course.student) {
+            const student = {
+                student: course.student
+            };
+          res.status(200).send(student);
+        } else {
+          next();
+        }
+      } catch (err) {
+        next(err);
+      }
     } else {
-      next();
+      res.status(403).send({
+        error:
+          "Need to be either admin or instructor of the course to access the student information.",
+      });
     }
-  } catch (e) {
-    next(e);
   }
-});
+);
 
 /*
- * Route to delete a business.
+ * Route to post a student.
  */
 router.post("/:courseId/students", async function (req, res, next) {
-  const businessId = req.params.businessId;
-  try {
-    const result = await Business.destroy({ where: { id: businessId } });
-    if (result > 0) {
-      res.status(204).send();
-    } else {
-      next();
+  //Check the role of user based on token
+  const user = await getUserById(req.user, true);
+
+  if (true) {
+    try {
+      const courseInfo = await getCourseById(req.params.courseId)
+      await insertNewStudentToCourse(req.params.courseId, req.body.add);
+      for(let i = 0; i < req.body.add.length; i++){
+        await insertCoursesToUser(req.body.add[i], req.params.courseId)
+      }
+      await deleteStudentFromCourse(req.params.courseId, req.body.remove);
+      res.status(201).send("Students added and removed from course");
+    } catch (err) {
+      next(err);
     }
-  } catch (e) {
-    next(e);
+  } else {
+    res.status(403).send({
+      error: "Need to be admin to post course.",
+    });
   }
 });
 
 /*
- * Route to delete a business.
+ * Route to delete a course.
  */
-router.get("/:courseId/roster", async function (req, res, next) {
-  const businessId = req.params.businessId;
-  try {
-    const result = await Business.destroy({ where: { id: businessId } });
-    if (result > 0) {
-      res.status(204).send();
-    } else {
-      next();
-    }
-  } catch (e) {
-    next(e);
-  }
-});
+router.get("/:courseId/roster", async function (req, res, next) {});
 
 /*
- * Route to delete a business.
+ * Route to delete a course.
  */
-router.get("/:courseId/assignments", async function (req, res, next) {
-  const businessId = req.params.businessId;
-  try {
-    const result = await Business.destroy({ where: { id: businessId } });
-    if (result > 0) {
-      res.status(204).send();
-    } else {
-      next();
-    }
-  } catch (e) {
-    next(e);
-  }
-});
+router.get("/:courseId/assignments", async function (req, res, next) {});
 
 module.exports = router;

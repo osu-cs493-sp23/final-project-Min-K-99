@@ -1,56 +1,104 @@
 const { Router } = require("express");
 
-const { Business } = require("../models/assignment");
-const { Photo } = require("../models/course");
-const { Review } = require("../models/user");
-
 const router = Router();
 
+const { validateAgainstSchema } = require('../lib/validation')
+
+const { UserSchema, insertNewUser, getUserById, getUserByEmail, getUserCoursesById, validateUser, getUserIdManual } = require('../models/user')
+
+const { generateAuthToken, requireAuthentication } = require('../lib/auth');
+const { ObjectId } = require("mongodb");
+
 /*
- * Route to list all of a user's businesses.
+ * Insert new user into `users` collection
  */
-router.post("/", async function (req, res) {
-  const userId = req.params.userId;
-  try {
-    const userBusinesses = await Business.findAll({
-      where: { ownerId: userId },
-    });
-    res.status(200).json({
-      businesses: userBusinesses,
-    });
-  } catch (e) {
-    next(e);
-  }
+router.post("/", async function (req, res, next) {
+    if (validateAgainstSchema(req.body, UserSchema)){
+        try{
+            const id = await insertNewUser(req.body)
+            res.status(201).send({_id: id})
+        } catch (e) {
+            next(e)
+        }
+    } else {
+        res.status(400).send({
+            error: "Request body does not contain a valid User."
+        })
+    }
 });
 
 /*
- * Route to list all of a user's reviews.
+ * Endpoint for user login
+ * User send email and password
+ * Server send back the token after giving clearance to email and password
  */
-router.post("/login", async function (req, res) {
-  const userId = req.params.userId;
-  try {
-    const userReviews = await Review.findAll({ where: { userId: userId } });
-    res.status(200).json({
-      reviews: userReviews,
-    });
-  } catch (e) {
-    next(e);
-  }
+router.post("/login", async function (req, res, next) {
+    if(req.body && req.body.email && req.body.password){
+        try{
+            const authenticated = await validateUser(
+                req.body.email,
+                req.body.password
+            )
+            const manualId = await getUserIdManual(
+                req.body.email, 
+                req.body.password)
+            
+            if (authenticated) {
+                const token = generateAuthToken(manualId)
+                res.status(200).send({
+                    token: token
+                })
+            } else {
+                res.status(401).send({
+                    error: "Invalid authentication credentials"
+                })
+            }
+        } catch (e) {
+            next(e)
+        }
+    } else {
+        res.status(400).send({
+            error: "Request body require `email` and `password`."
+        })
+    }
 });
 
 /*
- * Route to list all of a user's photos.
+ * Endpoint to get user's information based on userId
  */
-router.get("/:userId", async function (req, res) {
-  const userId = req.params.userId;
-  try {
-    const userPhotos = await Photo.findAll({ where: { userId: userId } });
-    res.status(200).json({
-      photos: userPhotos,
-    });
-  } catch (e) {
-    next(e);
-  }
+router.get("/:userId", requireAuthentication, async function (req, res, next) {
+    if(req.user === req.params.userId){
+        try {
+            const user = await getUserById(req.params.userId)
+            switch(user.role){
+                case "admin":
+                    res.status(200).send({
+                        name: user.name,
+                        email: user.email,
+                        role: user.role
+                    });
+                case "instructor":
+                    res.status(200).send({
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        courses: user.courses
+                    });
+                case "student":
+                    res.status(200).send({
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        courses: user.courses
+                    });
+            }
+        } catch (e) {
+            next(e)
+        }
+    } else {
+        res.status(403).send({
+            error: "Wrong Token Or File does not exist"
+        })
+    }
 });
-
 module.exports = router;
