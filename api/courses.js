@@ -3,8 +3,14 @@ const { connectToDb } = require("../lib/mongo");
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth");
 
-const { UserSchema, insertNewUser, getUserById, getUserByEmail, validateUser, getUserIdManual } = require('../models/user')
-
+const {
+  UserSchema,
+  insertNewUser,
+  getUserById,
+  getUserByEmail,
+  validateUser,
+  getUserIdManual,
+} = require("../models/user");
 
 const {
   getCoursePage,
@@ -13,6 +19,8 @@ const {
   getCourseById,
   updateCourseById,
   deleteCourseById,
+  insertNewStudentToCourse,
+  deleteStudentFromCourse,
 } = require("../models/course");
 
 const {
@@ -51,11 +59,10 @@ router.get("/", async function (req, res, next) {
  * Route to create a new course.
  */
 router.post("/", requireAuthentication, async function (req, res, next) {
-  
   //Check the role of user based on token
-  const user = await getUserById(req.user)
-  
-  if(user.role === "admin"){
+  const user = await getUserById(req.user);
+
+  if (user.role === "admin") {
     if (validateAgainstSchema(req.body, CourseSchema)) {
       try {
         const id = await insertNewCourse(req.body);
@@ -72,8 +79,8 @@ router.post("/", requireAuthentication, async function (req, res, next) {
     }
   } else {
     res.status(403).send({
-      error: "Need to be admin to post course."
-    })
+      error: "Need to be admin to post course.",
+    });
   }
 });
 
@@ -96,76 +103,116 @@ router.get("/:courseId", async function (req, res, next) {
 /*
  * Route to update data for a course.
  */
-router.patch("/:courseId", requireAuthentication, async function (req, res, next) {
-  //check user role based on token
-  const user = await getUserById(req.user)
-  const idCheck = await getCourseById(req.params.courseId)
+router.patch(
+  "/:courseId",
+  requireAuthentication,
+  async function (req, res, next) {
+    //check user role based on token
+    const user = await getUserById(req.user);
+    const idCheck = await getCourseById(req.params.courseId);
 
-  if(user.role === "admin" || (user.role === "instructor" && user._id.toString() === idCheck.instructorId)){
-    try {
-      const result = await updateCourseById(req.params.courseId, req.body);
-      res.status(200).send(`Your data is modified`);
-    } catch (err) {
-      next(err);
+    if (
+      user.role === "admin" ||
+      (user.role === "instructor" &&
+        user._id.toString() === idCheck.instructorId)
+    ) {
+      try {
+        const result = await updateCourseById(req.params.courseId, req.body);
+        res.status(200).send(`Your data is modified`);
+      } catch (err) {
+        next(err);
+      }
+    } else {
+      res.status(403).send({
+        error:
+          "Need to be either admin or instructor of the course to patch course information.",
+      });
     }
-  } else {
-    res.status(403).send({
-      error: "Need to be either admin or instructor of the course to patch course information."
-    })
   }
-});
+);
 
 /*
  * Route to delete info about a specific course.
  */
-router.delete("/:courseId", requireAuthentication, async function (req, res, next) {
-  //Check user role based on token
-  const user = await getUserById(req.user)
-  if(user.role === "admin"){
-    try {
-      const course = await deleteCourseById(req.params.courseId);
-      res.status(200).send(`Your data is deleted`);
-    } catch (err) {
-      next(err);
+router.delete(
+  "/:courseId",
+  requireAuthentication,
+  async function (req, res, next) {
+    //Check user role based on token
+    const user = await getUserById(req.user);
+    if (user.role === "admin") {
+      try {
+        const course = await deleteCourseById(req.params.courseId);
+        res.status(200).send(`Your data is deleted`);
+      } catch (err) {
+        next(err);
+      }
+    } else {
+      res.status(403).send({
+        error: "Need to be admin to delete courses.",
+      });
     }
-  } else {
-    res.status(403).send({
-      error: "Need to be admin to delete courses."
-    })
   }
-});
+);
 
 /*
  * Route to delete a course.
  */
-router.get("/:courseId/students", requireAuthentication, async function (req, res, next) {
-  //check user role based on token
-  const user = await getUserById(req.user)
-  const idCheck = await getCourseById(req.params.courseId)
+router.get(
+  "/:courseId/students",
+  requireAuthentication,
+  async function (req, res, next) {
+    //check user role based on token
+    const user = await getUserById(req.user);
+    const idCheck = await getCourseById(req.params.courseId);
 
-  if(user.role === "admin" || (user.role === "instructor" && user._id.toString() === idCheck.instructorId)){
-    try {
-      const course = await getCourseById(req.params.courseId);
-      if (course) {
-        res.status(200).send(course);
-      } else {
-        next();
+    if (
+      user.role === "admin" ||
+      (user.role === "instructor" &&
+        user._id.toString() === idCheck.instructorId)
+    ) {
+      try {
+        const course = await getCourseById(req.params.courseId);
+        if (course.student) {
+            const student = {
+                student: course.student
+            };
+          res.status(200).send(student);
+        } else {
+          next();
+        }
+      } catch (err) {
+        next(err);
       }
-    } catch (err) {
-      next(err);
+    } else {
+      res.status(403).send({
+        error:
+          "Need to be either admin or instructor of the course to access the student information.",
+      });
     }
-  } else {
-    res.status(403).send({
-      error: "Need to be either admin or instructor of the course to access the student information."
-    })
   }
-});
+);
 
 /*
- * Route to delete a course.
+ * Route to post a student.
  */
 router.post("/:courseId/students", async function (req, res, next) {
+  //Check the role of user based on token
+  const user = await getUserById(req.user, true);
 
+  if (true) {
+    try {
+      await insertNewStudentToCourse(req.params.courseId, req.body.add);
+      await deleteStudentFromCourse(req.params.courseId, req.body.remove);
+      res.status(201).send("Students added and removed from course");
+    } catch (err) {
+      next(err);
+    }
+  } else {
+    res.status(403).send({
+      error: "Need to be admin to post course.",
+    });
+  }
 });
 
 /*

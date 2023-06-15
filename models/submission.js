@@ -3,6 +3,7 @@
  */
 
 const { ObjectId } = require("mongodb");
+const mongoose = require("mongoose");
 
 const { getDbReference } = require("../lib/mongo");
 const { extractValidFields } = require("../lib/validation");
@@ -10,10 +11,21 @@ const { extractValidFields } = require("../lib/validation");
 /*
  * Schema describing required/optional fields of a submission object.
  */
-const SubmissionSchema = {
-    grade: {required: false}
-};
-exports.SubmissionSchema = SubmissionSchema;
+const SubmissionSchema = new mongoose.Schema({
+  assignmentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
+  studentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  timestamp: { type: String, required: true },
+  grade: { type: Number, required: true },
+  file: { type: String, required: true },
+});
+exports.SubmissionSchema = mongoose.model("Submission", SubmissionSchema);
 
 /*
  * Executes a DB query to return a single page of submissions.  Returns a
@@ -71,8 +83,7 @@ exports.insertNewSubmission = insertNewSubmission;
  * information about the requested submission.  If no submission with the
  * specified ID exists, the returned Promise will resolve to null.
  */
-async function getSubmissionById(id) {
-}
+async function getSubmissionById(id) {}
 exports.getSubmissionById = getSubmissionById;
 
 /*
@@ -80,6 +91,5 @@ exports.getSubmissionById = getSubmissionById;
  * Returns a Promise that resolves to a map of the IDs of the newly-created
  * submission entries.
  */
-async function bulkInsertNewSubmissions(submissions) {
-}
+async function bulkInsertNewSubmissions(submissions) {}
 exports.bulkInsertNewSubmissions = bulkInsertNewSubmissions;

@@ -17,6 +17,7 @@ const CourseSchema = {
   title: { required: true },
   term: { required: true },
   instructorId: { required: true },
+  student: { required: false },
 };
 exports.CourseSchema = CourseSchema;
 
@@ -136,6 +137,26 @@ async function getStudentsByCourseId(id) {
   }
 }
 exports.getStudentsByCourseId = getStudentsByCourseId;
+
+async function insertNewStudentToCourse(courseId, studentId) {
+  const db = getDbReference();
+  const collection = db.collection("courses");
+  await collection.updateOne(
+    { _id: new ObjectId(courseId) },
+    { $push: { student: { $each: studentId } } }
+  );
+}
+exports.insertNewStudentToCourse = insertNewStudentToCourse;
+
+async function deleteStudentFromCourse(courseId, studentId) {
+  const db = getDbReference();
+  const collection = db.collection("courses");
+  await collection.updateOne(
+    { _id: new ObjectId(courseId) },
+    { $pull: { student: { $in: studentId } } }
+  );
+}
+exports.deleteStudentFromCourse = deleteStudentFromCourse;
 
 /*
  * Executes a DB query to bulk insert an array new business into the database.
