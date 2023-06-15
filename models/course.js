@@ -159,6 +159,29 @@ async function deleteStudentFromCourse(courseId, studentId) {
 exports.deleteStudentFromCourse = deleteStudentFromCourse;
 
 /*
+ * Executes a DB query to fetch detailed information about a single
+ * specified business based on its ID, including photo data for
+ * the business.  Returns a Promise that resolves to an object containing
+ * information about the requested business.  If no business with the
+ * specified ID exists, the returned Promise will resolve to null.
+ */
+async function getAssignmentByCourseId(id) {
+  const db = getDbReference();
+  const collection = db.collection("assignments");
+  if (!ObjectId.isValid(id)) {
+    return null;
+  } else {
+    console.log("id: ", id);
+    const results = await collection
+      .aggregate([{ $match: { courseId: id } }])
+      .toArray();
+      console.log("results: ", results);
+    return results;
+  }
+}
+exports.getAssignmentByCourseId = getAssignmentByCourseId;
+
+/*
  * Executes a DB query to bulk insert an array new business into the database.
  * Returns a Promise that resolves to a map of the IDs of the newly-created
  * business entries.
