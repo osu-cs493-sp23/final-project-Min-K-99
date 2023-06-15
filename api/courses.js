@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const { connectToDb } = require("../lib/mongo");
 const createCsvWriter = require("csv-writer").createObjectCsvWriter;
+const fs = require("fs");
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth");
 
@@ -235,36 +236,46 @@ router.get(
     try {
       const course = await getCourseById(req.params.courseId);
       if (course.student) {
-        // console.log("course.student: ", course.student); // [123, 456]
-        // console.log("req.user: ", await getUserById(req.user)); // {name, email, role}
-        const tempArr = [1, 2, 3];
         const transformedArray = await Promise.all(
-          tempArr.map(async (item) => {
-            const user = await getUserById(req.user);
-            return [item, user.name, user.email];
+          course.student.map(async (item) => {
+            const user = await getUserById(item);
+            return {
+              id: item,
+              name: user.name,
+              email: user.email,
+            };
           })
         );
-        console.log("transformedArray: ", transformedArray);
 
         const csvWriter = createCsvWriter({
           path: "roster.csv",
           header: [
-            { id: "name", title: "NAME" },
-            { id: "lang", title: "LANGUAGE" },
+            { id: "id", title: "ID" },
+            { id: "name", title: "Name" },
+            { id: "email", title: "Email" },
           ],
         });
-
-        const records = [
-          { name: "Bob", lang: "French, English" },
-          { name: "Mary", lang: "English" },
-        ];
-
         csvWriter
-          .writeRecords(records)
-          .then(() => console.log("CSV file created successfully"))
-          .catch((err) => console.error(err));
+          .writeRecords(transformedArray)
+          .then(() =>
+            fs.readFile("roster.csv", "utf8", (err, data) => {
+              if (err) {
+                console.error(err);
+                return;
+              }
 
-        res.status(200).send("nice");
+              const lines = data.split("\n");
+              const responseLines = [];
+              lines.forEach((line) => {
+                if (line.trim() !== "") {
+                  responseLines.push(line);
+                }
+              });
+
+              res.status(200).send(responseLines);
+            })
+          )
+          .catch((err) => console.error(err));
       } else {
         next();
       }
