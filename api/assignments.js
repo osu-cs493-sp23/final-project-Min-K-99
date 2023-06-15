@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const { getDbReference } = require("../lib/mongo");
 const { validateAgainstSchema } = require("../lib/validation");
+const { rateLimit } = require('../lib/rateLimit')
 
 const { AssignmentSchema, SubmissionSchema, insertNewAssignment, insertNewSubmission, getAssignmentById, getSubmissionById, updateAssignmentById, deleteAssignmentById } = require("../models/assignment");
 const { UserSchema, insertNewUser, getUserById, getUserByEmail, validateUser, getUserIdManual } = require('../models/user')
@@ -20,7 +21,7 @@ const router = Router();
 /*
  * Route to create a new assignment.
  */
-router.post("/", requireAuthentication, async function (req, res, next) {
+router.post("/", rateLimit, requireAuthentication, async function (req, res, next) {
 
     //Check the role of user based on token
     const user = await getUserById(req.user)
@@ -51,7 +52,7 @@ router.post("/", requireAuthentication, async function (req, res, next) {
 /*
  * Route to fetch info about a specific photo.
  */
-router.get("/:assignmentId", requireAuthentication, async function (req, res, next) {
+router.get("/:assignmentId", rateLimit, requireAuthentication, async function (req, res, next) {
     try{
         const assignment = await getAssignmentById(req.params.assignmentId)
         if(assignment){
@@ -72,7 +73,7 @@ router.get("/:assignmentId", requireAuthentication, async function (req, res, ne
 /*
  * Route to update an assignment based on assignmentId
  */
-router.patch("/:assignmentId", requireAuthentication, async function (req, res, next) {
+router.patch("/:assignmentId", rateLimit, requireAuthentication, async function (req, res, next) {
     //Check user role
     const user = await getUserById(req.user)
     const getInstructorId = await getAssignmentById(req.params.assignmentId)
@@ -97,7 +98,7 @@ router.patch("/:assignmentId", requireAuthentication, async function (req, res, 
 /*
  * Route to delete an assignment based on assignmentId
  */
-router.delete("/:assignmentId", requireAuthentication, async function (req, res, next) {
+router.delete("/:assignmentId", rateLimit, requireAuthentication, async function (req, res, next) {
     //Check user role and/or Id for course
     const user = await getUserById(req.user)
     const getinstructorId = await getAssignmentById(req.params.assignmentId)
@@ -126,7 +127,7 @@ router.delete("/:assignmentId", requireAuthentication, async function (req, res,
 /*
  * Route to get submission based on assignmentId
  */
-router.get("/:assignmentId/submissions", requireAuthentication, async function (req, res, next) {
+router.get("/:assignmentId/submissions", rateLimit, requireAuthentication, async function (req, res, next) {
     //Check the role of user based on token
     const user = await getUserById(req.user)
 
@@ -153,7 +154,7 @@ router.get("/:assignmentId/submissions", requireAuthentication, async function (
  * This functions prob need to be a child of assignments and need to be created based on parent.
  * Function is partially done but still need a lot of work
  */
-router.post("/:assignmentId/submissions", requireAuthentication, async function (req, res, next) {
+router.post("/:assignmentId/submissions", rateLimit, requireAuthentication, async function (req, res, next) {
     //check user role
     const user = await getUserById(req.user)
 

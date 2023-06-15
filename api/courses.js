@@ -2,7 +2,7 @@ const { Router } = require("express");
 const { connectToDb } = require("../lib/mongo");
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth");
-
+const { rateLimit } = require('../lib/rateLimit')
 const {
   UserSchema,
   insertNewUser,
