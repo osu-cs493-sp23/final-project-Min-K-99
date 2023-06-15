@@ -21,13 +21,13 @@ const CourseSchema = {
 };
 exports.CourseSchema = CourseSchema;
 
-const StudentSchema = {
-  name: { required: false },
-  email: { required: true },
-  password: { required: true },
-  role: { required: true },
-};
-exports.StudentSchema = StudentSchema;
+// const StudentSchema = {
+//   name: { required: false },
+//   email: { required: true },
+//   password: { required: true },
+//   role: { required: true },
+// };
+// exports.StudentSchema = StudentSchema;
 
 /*
  * Executes a DB query to return a single page of businesses.  Returns a

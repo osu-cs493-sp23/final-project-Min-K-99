@@ -1,5 +1,6 @@
 const { Router } = require("express");
 const { connectToDb } = require("../lib/mongo");
+const createCsvWriter = require("csv-writer").createObjectCsvWriter;
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth");
 
@@ -174,9 +175,9 @@ router.get(
       try {
         const course = await getCourseById(req.params.courseId);
         if (course.student) {
-            const student = {
-                student: course.student
-            };
+          const student = {
+            student: course.student,
+          };
           res.status(200).send(student);
         } else {
           next();
@@ -196,29 +197,69 @@ router.get(
 /*
  * Route to post a student.
  */
-router.post("/:courseId/students", async function (req, res, next) {
-  //Check the role of user based on token
-  const user = await getUserById(req.user, true);
+router.post(
+  "/:courseId/students",
+  requireAuthentication,
+  async function (req, res, next) {
+    //Check the role of user based on token
+    const user = await getUserById(req.user, true);
 
-  if (true) {
-    try {
-      await insertNewStudentToCourse(req.params.courseId, req.body.add);
-      await deleteStudentFromCourse(req.params.courseId, req.body.remove);
-      res.status(201).send("Students added and removed from course");
-    } catch (err) {
-      next(err);
+    if (user.role === "admin") {
+      try {
+        await insertNewStudentToCourse(req.params.courseId, req.body.add);
+        await deleteStudentFromCourse(req.params.courseId, req.body.remove);
+        res.status(201).send("Students added and removed from course");
+      } catch (err) {
+        next(err);
+      }
+    } else {
+      res.status(403).send({
+        error: "Need to be admin to post course.",
+      });
     }
-  } else {
-    res.status(403).send({
-      error: "Need to be admin to post course.",
-    });
   }
-});
+);
 
 /*
  * Route to delete a course.
  */
-router.get("/:courseId/roster", async function (req, res, next) {});
+router.get(
+  "/:courseId/roster",
+  requireAuthentication,
+  async function (req, res, next) {
+    try {
+      const course = await getCourseById(req.params.courseId);
+      if (course.student) {
+        // console.log("course.student: ", course.student); // [123, 456]
+        // console.log("req.user: ", await getUserById(req.user)); // {name, email, role}
+        const tempArr = [1, 2, 3];
+        const transformedArray = await Promise.all(
+          tempArr.map(async (item) => {
+            const user = await getUserById(req.user);
+            return [item, user.name, user.email];
+          })
+        );
+        console.log("transformedArray: ", transformedArray);
+        
+        const csvWriter = createCsvWriter({
+          path: "roster.csv",
+          header: ["ID", "Name", "Email"],
+        });
+
+        csvWriter
+          .writeRecords(transformedArray)
+          .then(() => console.log("CSV file created successfully"))
+          .catch((err) => console.error(err));
+
+        res.status(200).send("nice");
+      } else {
+        next();
+      }
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 /*
  * Route to delete a course.
