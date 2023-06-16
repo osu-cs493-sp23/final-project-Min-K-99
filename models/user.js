@@ -49,7 +49,6 @@ async function getUserById (id, includePassword) {
           .aggregate([{$match: {_id: new ObjectId(id.toString())}}])
           // .project(includePassword ? {} : { password: 0 })
           .toArray()
-      console.log("==results:", results)
       return results[0]
   }
 }
@@ -66,7 +65,6 @@ async function getUserByEmail(email, includePassword){
     .find({ email: email })
     .project(includePassword ? {} : { password: 0 })
     .toArray()
-  console.log("==results[0]:", results[0])
   return results[0]
 }
 exports.getUserByEmail = getUserByEmail;
@@ -115,6 +113,5 @@ exports.validateUser = async function (email, password) {
  */
 exports.getUserIdManual = async function(email, password){
   const user = await getUserByEmail(email, true)
-  console.log("==user.id:", user._id.toString())
   return user._id.toString()
 }

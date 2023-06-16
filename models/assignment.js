@@ -64,7 +64,6 @@ async function getAssignmentById(id) {
     .find({_id: new ObjectId(id)})
     .toArray()
   
-  console.log("==results:", results)
   return results[0]
 }
 
@@ -175,7 +174,6 @@ async function deleteAssignmentById(id) {
   const results = await collection
     .deleteOne({_id: new ObjectId(id)})
   
-  console.log("==results:", results)
   return results
 }
 exports.deleteAssignmentById = deleteAssignmentById
