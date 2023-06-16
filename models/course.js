@@ -41,7 +41,7 @@ async function getCoursePage(page) {
   const offset = (page - 1) * pageSize;
 
   const results = await collection
-    .find({})
+    .find({}, { student: 0, assignment: 0 })
     .sort({ _id: 1 })
     .skip(offset)
     .limit(pageSize)
@@ -84,7 +84,15 @@ async function getCourseById(id) {
     return null;
   } else {
     const results = await collection
-      .aggregate([{ $match: { _id: new ObjectId(id) } }])
+      .aggregate([
+        { $match: { _id: new ObjectId(id) } },
+        {
+          $project: {
+            student: 0, // Exclude the "student" field
+            assignment: 0, // Exclude the "assignment" field
+          },
+        },
+      ])
       .toArray();
     return results[0];
   }
