@@ -78,6 +78,7 @@ router.get("/:userId", rateLimit, requireAuthentication, async function (req, re
                         email: user.email,
                         role: user.role
                     });
+                    break;
                 case "instructor":
                     res.status(200).send({
                         name: user.name,
@@ -85,6 +86,7 @@ router.get("/:userId", rateLimit, requireAuthentication, async function (req, re
                         role: user.role,
                         courses: user.courses
                     });
+                    break;
                 case "student":
                     res.status(200).send({
                         name: user.name,
@@ -92,6 +94,7 @@ router.get("/:userId", rateLimit, requireAuthentication, async function (req, re
                         role: user.role,
                         courses: user.courses
                     });
+                    break;
                 default:
 
             }

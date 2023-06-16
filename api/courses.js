@@ -118,7 +118,7 @@ router.patch(
     //check user role based on token
     const user = await getUserById(req.user);
     const idCheck = await getCourseById(req.params.courseId);
-
+    console.log(" == role:", user.role)
     if (
       user.role === "admin" ||
       (user.role === "instructor" &&
@@ -157,10 +157,13 @@ router.delete(
         //Delete Instructors
         await deleteCourseFromUser(roleChecker.instructorId.toString(), req.params.courseId)
 
-        //Delete Students
-        for(let i = 0; i < roleChecker.student.length; i++){
-          await deleteCourseFromUser(roleChecker.student[i].toString(), req.params.courseId)
+        if(roleChecker.student){
+          //Delete Students
+          for(let i = 0; i < roleChecker.student.length; i++){
+            await deleteCourseFromUser(roleChecker.student[i].toString(), req.params.courseId)
+          }
         }
+        
 
         const course = await deleteCourseById(req.params.courseId);
         // await deleteCourseFromUser(courseId.instructorId.toString(), req.params.courseId);

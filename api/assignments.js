@@ -155,7 +155,9 @@ router.get("/:assignmentId/submissions", rateLimit, requireAuthentication, async
                 // }
                 res.status(200).send(submissionPage)
             } else {
-                next()
+                res.status(404).send({
+                    err: "No submission exists."
+                })
             }
         } catch (e) {
             next (e)
