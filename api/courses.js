@@ -152,8 +152,10 @@ router.delete(
     
     if (user.role === "admin") {
       try {
+        const courseId = await getCourseById(req.params.courseId)
+
         const course = await deleteCourseById(req.params.courseId);
-        await deleteCourseFromUser(user._id.toString(), req.params.courseId);
+        await deleteCourseFromUser(courseId.instructorId.toString(), req.params.courseId);
         res.status(200).send(`Your data is deleted`);
       } catch (err) {
         next(err);
@@ -221,7 +223,7 @@ router.post(
     //Check the role of user based on token
     const user = await getUserById(req.user, true);
     const idCheck = await getCourseById(req.params.courseId);
-
+    
     if (
       user.role === "admin" ||
       (user.role === "instructor" &&
@@ -229,21 +231,24 @@ router.post(
     ) {
       try {
         const courseInfo = await getCourseById(req.params.courseId);
+        
         await insertNewStudentToCourse(req.params.courseId, req.body.add);
 
         for (let i = 0; i < req.body.add.length; i++) {
           await insertCoursesToUser(req.body.add[i], req.params.courseId);
         }
-
         await deleteStudentFromCourse(req.params.courseId, req.body.remove);
         for(let i = 0; i < req.body.remove.length; i++){
           await deleteCourseFromUser(req.body.remove[i], req.params.courseId)
         }
-
         res.status(201).send("Students added and removed from course");
       } catch (err) {
         next(err);
       }
+    } else {
+      res.status(403).send({
+        error: "Need to be either admin or instructor of class to add/remove students"
+      })
     }
   }
 );

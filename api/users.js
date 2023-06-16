@@ -4,7 +4,7 @@ const router = Router();
 
 const { validateAgainstSchema } = require('../lib/validation')
 
-const { UserSchema, insertNewUser, getUserById, getUserByEmail, getUserCoursesById, validateUser, getUserIdManual } = require('../models/user')
+const { UserSchema, insertNewUser, getUserById, getUserByEmail, getUserCoursesById, validateUser, getUserIdManual, insertCoursesToUser } = require('../models/user')
 
 const { generateAuthToken, requireAuthentication } = require('../lib/auth');
 const { rateLimit } = require('../lib/rateLimit')
@@ -51,7 +51,7 @@ router.post("/login", async function (req, res, next) {
                 })
             } else {
                 res.status(401).send({
-                    error: "Invalid authentication credentials"
+                    error: "Try again. Wrong email or password."
                 })
             }
         } catch (e) {
@@ -83,7 +83,7 @@ router.get("/:userId", rateLimit, requireAuthentication, async function (req, re
                         name: user.name,
                         email: user.email,
                         role: user.role,
-                        courses: userInfo.courses
+                        courses: user.courses
                     });
                 case "student":
                     res.status(200).send({

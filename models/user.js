@@ -46,10 +46,10 @@ async function getUserById (id, includePassword) {
       return null
   } else {
       const results = await collection
-          .find({ _id: new ObjectId(id) })
-          .project(includePassword ? {} : { password: 0 })
+          .aggregate([{$match: {_id: new ObjectId(id.toString())}}])
+          // .project(includePassword ? {} : { password: 0 })
           .toArray()
-      
+      console.log("==results:", results)
       return results[0]
   }
 }
