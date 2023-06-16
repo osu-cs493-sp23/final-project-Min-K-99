@@ -148,7 +148,7 @@ router.delete(
   requireAuthentication,
   async function (req, res, next) {
     //Check user role based on token
-    const user = await getUserById(req.user);
+    const user = await getUserById(req.user, true);
     
     if (user.role === "admin") {
       try {
@@ -175,7 +175,7 @@ router.get(
   requireAuthentication,
   async function (req, res, next) {
     //check user role based on token
-    const user = await getUserById(req.user);
+    const user = await getUserById(req.user, true);
     const idCheck = await getCourseById(req.params.courseId);
 
     if (
@@ -187,12 +187,16 @@ router.get(
         const course = await getCourseById(req.params.courseId);
         console.log("==course.student:", course.student)
         if (course.student) {
-          const student = {
-            student: course.student,
-          };
-          res.status(200).send(student);
+        const student = {
+          student: course.student,
+        };
+        res.status(200).send({
+          student: student
+        });
         } else {
-          next();
+          res.status(403).send({
+            student : []
+          })
         }
       } catch (err) {
         next(err);
