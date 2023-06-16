@@ -1,5 +1,6 @@
 const { Router } = require("express");
 const { connectToDb } = require("../lib/mongo");
+const { rateLimit } = require('../lib/rateLimit')
 
 const router = Router();
 
