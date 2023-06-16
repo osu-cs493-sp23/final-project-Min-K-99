@@ -42,11 +42,12 @@ async function getCoursePage(page) {
 
   const results = await collection
     .find({}, { student: 0, assignment: 0 })
+    .project({student: 0})
     .sort({ _id: 1 })
     .skip(offset)
     .limit(pageSize)
     .toArray();
-
+    
   return {
     courses: results,
     page: page,
