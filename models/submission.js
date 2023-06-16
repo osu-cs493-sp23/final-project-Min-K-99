@@ -11,21 +11,14 @@ const { extractValidFields } = require("../lib/validation");
 /*
  * Schema describing required/optional fields of a submission object.
  */
-const SubmissionSchema = new mongoose.Schema({
-  assignmentId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-  },
-  studentId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  timestamp: { type: String, required: true },
-  grade: { type: Number, required: true },
-  file: { type: String, required: true },
+const SubmissionSchema = ({
+  assignmentId: {required: true},
+  studentId: {required: true},
+  timestamp: {required: true},
+  grade: {required: true},
+  file: {required: true}
 });
-exports.SubmissionSchema = mongoose.model("Submission", SubmissionSchema);
+exports.SubmissionSchema = SubmissionSchema;
 
 /*
  * Executes a DB query to return a single page of submissions.  Returns a
@@ -83,7 +76,11 @@ exports.insertNewSubmission = insertNewSubmission;
  * information about the requested submission.  If no submission with the
  * specified ID exists, the returned Promise will resolve to null.
  */
-async function getSubmissionById(id) {}
+async function getSubmissionById(id) {
+  const db = getDbReference();
+  const collection = db.collection("submissions");
+  
+}
 exports.getSubmissionById = getSubmissionById;
 
 /*
