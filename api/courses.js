@@ -26,6 +26,7 @@ const {
   deleteCourseById,
   insertNewStudentToCourse,
   deleteStudentFromCourse,
+  getAssignmentByCourseId,
 } = require("../models/course");
 
 const {
@@ -210,7 +211,11 @@ router.post(
     //Check the role of user based on token
     const user = await getUserById(req.user, true);
 
-    if (true) {
+    if (
+      user.role === "admin" ||
+      (user.role === "instructor" &&
+        user._id.toString() === idCheck.instructorId)
+    ) {
       try {
         const courseInfo = await getCourseById(req.params.courseId);
         await insertNewStudentToCourse(req.params.courseId, req.body.add);
@@ -288,6 +293,17 @@ router.get(
 /*
  * Route to delete a course.
  */
-router.get("/:courseId/assignments", async function (req, res, next) {});
+router.get("/:courseId/assignments", async function (req, res, next) {
+  try {
+    const assignment = await getAssignmentByCourseId(req.params.courseId);
+    if (assignment) {
+      res.status(200).send({ assignments: assignment });
+    } else {
+      next();
+    }
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;
