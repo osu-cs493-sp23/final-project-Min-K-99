@@ -105,7 +105,6 @@ exports.deleteCourseFromUser = async function(id, courseId) {
   }
 }
 
-
 exports.validateUser = async function (email, password) {
   const user = await getUserByEmail(email, true)
   return user && await bcrypt.compare(password, user.password)

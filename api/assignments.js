@@ -52,14 +52,14 @@ router.post("/", rateLimit, requireAuthentication, async function (req, res, nex
 /*
  * Route to fetch info about a specific photo.
  */
-router.get("/:assignmentId", rateLimit, requireAuthentication, async function (req, res, next) {
+router.get("/:assignmentId", async function (req, res, next) {
     try{
         const assignment = await getAssignmentById(req.params.assignmentId)
         if(assignment){
             res.status(200).send({
                 courseId : assignment.courseId,
                 title : assignment.title,
-                poitns: assignment.points,
+                points: assignment.points,
                 due: assignment.due
             })
         } else {
@@ -157,8 +157,10 @@ router.get("/:assignmentId/submissions", rateLimit, requireAuthentication, async
 router.post("/:assignmentId/submissions", rateLimit, requireAuthentication, async function (req, res, next) {
     //check user role
     const user = await getUserById(req.user)
+    const cousreIDGrab = await getAssignmentById(req.params.assignmentId)
+    const studentEnrolledCheck = await getCourseById(cousreIDGrab.courseId)
 
-    if(user.role === "student"){
+    if(user.role === "student" && studentEnrolledCheck.student.includes(user._id.toString())){
         if(validateAgainstSchema(req.body, SubmissionSchema)){
             try{
                 const id = await insertNewSubmission(req.body)
@@ -175,7 +177,7 @@ router.post("/:assignmentId/submissions", rateLimit, requireAuthentication, asyn
         }
     } else {
         res.status(403).send({
-            error: "Unable to access the specified resource."
+            error: "Need to be student of the course to submit assignment."
         })
     }
 });
