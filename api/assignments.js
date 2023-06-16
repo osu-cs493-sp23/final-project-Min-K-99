@@ -3,7 +3,7 @@ const { getDbReference } = require("../lib/mongo");
 const { validateAgainstSchema } = require("../lib/validation");
 const { rateLimit } = require('../lib/rateLimit')
 
-const { AssignmentSchema, SubmissionSchema, insertNewAssignment, insertNewSubmission, getAssignmentById, getSubmissionsById, updateAssignmentById, deleteAssignmentById } = require("../models/assignment");
+const { AssignmentSchema, SubmissionSchema, insertNewAssignment, insertNewSubmission, getAssignmentById, getSubmissionPage, getSubmissionsById, updateAssignmentById, deleteAssignmentById } = require("../models/assignment");
 const { UserSchema, insertNewUser, getUserById, getUserByEmail, insertCoursesToUser, validateUser, getUserIdManual } = require('../models/user')
 const {
     getCoursePage,
@@ -16,6 +16,7 @@ const {
 
 const { generateAuthToken, requireAuthentication } = require("../lib/auth");
 const { ObjectId } = require("bson");
+const { getSubmissionsPage } = require("../models/submission");
 const router = Router();
 
 /*
@@ -130,12 +131,29 @@ router.delete("/:assignmentId", rateLimit, requireAuthentication, async function
 router.get("/:assignmentId/submissions", rateLimit, requireAuthentication, async function (req, res, next) {
     //Check the role of user based on token
     const user = await getUserById(req.user)
+    const submissionPage = await getSubmissionsPage(parseInt(req.query.page) || 1)
+    submissionPage.links = {};
 
     if(user.role === "admin" || user.role === "instructor"){
         try{
+            const submissionPage = await getSubmissionsPage(parseInt(req.query.page) || 1)
+            submissionPage.links = {};
+            if (submissionPage.page < submissionPage.totalPages) {
+                submissionPage.links.nextPage = `/courses?page=${submissionPage.page + 1}`;
+                submissionPage.links.lastPage = `/courses?page=${submissionPage.totalPages}`;
+            }
+            if (submissionPage.page > 1) {
+                submissionPage.links.prevPage = `/courses?page=${submissionPage.page - 1}`;
+                submissionPage.links.firstPage = "/courses?page=1";
+            }
+          
             const submission = await getSubmissionsById(req.params.assignmentId)
             if(submission){
-                res.status(200).send(submission)
+                // const resBody = {
+                //     submissions: submission,
+                //     submissionPage: submissionPage
+                // }
+                res.status(200).send(submissionPage)
             } else {
                 next()
             }

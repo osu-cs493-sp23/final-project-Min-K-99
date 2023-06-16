@@ -167,7 +167,7 @@ router.delete(
 );
 
 /*
- * Route to delete a course.
+ * Route to fetch a list of students enrolled in the course.
  */
 router.get(
   "/:courseId/students", 
@@ -245,6 +245,8 @@ router.post(
 );
 
 /*
+ * Route to return a CSV file containing info about all students currently 
+ * enrolled in the Course.
  * Route to download student information csvfile of respected course
  */
 router.get(
@@ -319,7 +321,7 @@ router.get(
 );
 
 /*
- * Route to get assignments of respected course
+ * Route to delete a course.
  */
 router.get("/:courseId/assignments", async function (req, res, next) {
   try {
