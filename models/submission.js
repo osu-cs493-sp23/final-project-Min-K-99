@@ -12,18 +12,11 @@ const { extractValidFields } = require("../lib/validation");
  * Schema describing required/optional fields of a submission object.
  */
 const SubmissionSchema = new mongoose.Schema({
-  assignmentId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-  },
-  studentId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  timestamp: { type: String, required: true },
-  grade: { type: Number, required: true },
-  file: { type: String, required: true },
+  assignmentId: {required: true},
+  studentId: {required: true},
+  timestamp: {required: true},
+  grade: {required: true},
+  file: {required: true}
 });
 exports.SubmissionSchema = mongoose.model("Submission", SubmissionSchema);
 
