@@ -152,10 +152,18 @@ router.delete(
     
     if (user.role === "admin") {
       try {
-        const courseId = await getCourseById(req.params.courseId)
+        const roleChecker = await getCourseById(req.params.courseId)
+
+        //Delete Instructors
+        await deleteCourseFromUser(roleChecker.instructorId.toString(), req.params.courseId)
+
+        //Delete Students
+        for(let i = 0; i < roleChecker.student.length; i++){
+          await deleteCourseFromUser(roleChecker.student[i].toString(), req.params.courseId)
+        }
 
         const course = await deleteCourseById(req.params.courseId);
-        await deleteCourseFromUser(courseId.instructorId.toString(), req.params.courseId);
+        // await deleteCourseFromUser(courseId.instructorId.toString(), req.params.courseId);
         res.status(200).send(`Your data is deleted`);
       } catch (err) {
         next(err);
@@ -187,7 +195,7 @@ router.get(
     ) {
       try {
         const course = await getCourseById(req.params.courseId);
-        console.log("==course.student:", course.student)
+        
         if (course.student) {
         const student = {
           student: course.student,

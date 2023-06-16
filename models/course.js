@@ -21,14 +21,6 @@ const CourseSchema = {
 };
 exports.CourseSchema = CourseSchema;
 
-// const StudentSchema = {
-//   name: { required: false },
-//   email: { required: true },
-//   password: { required: true },
-//   role: { required: true },
-// };
-// exports.StudentSchema = StudentSchema;
-
 /*
  * Executes a DB query to return a single page of businesses.  Returns a
  * Promise that resolves to an array containing the fetched page of businesses.
@@ -171,11 +163,9 @@ async function getAssignmentByCourseId(id) {
   if (!ObjectId.isValid(id)) {
     return null;
   } else {
-    console.log("id: ", id);
     const results = await collection
       .aggregate([{ $match: { courseId: id } }])
       .toArray();
-      console.log("results: ", results);
     return results;
   }
 }
